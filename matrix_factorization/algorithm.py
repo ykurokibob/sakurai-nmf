@@ -120,17 +120,17 @@ class _BiasSemiNMF(_SemiNMF):
         uu = tf.matmul(self.u_bias, self.u, transpose_b=True)
         uu_abs = tf.abs(uu)
         
-        ua_plus = tf.add(au_abs, au) * 0.5
-        ua_minus = tf.subtract(au_abs, au) * 0.5
+        ua_plus = (au_abs + au) * 0.5
+        ua_minus = (au_abs - au) * 0.5
         
-        uu_plus = tf.add(uu_abs, uu) * 0.5
-        uu_minus = tf.subtract(uu_abs, uu) * 0.5
+        uu_plus = (uu_abs + uu) * 0.5
+        uu_minus = (uu_abs - uu) * 0.5
         
-        lambda_v = tf.multiply(self.beta, self.v)
+        lambda_v = self.beta * self.v
         sqrt = tf.sqrt(tf.divide(
             ua_plus + tf.matmul(self.v_bias, uu_minus) + lambda_v,
             ua_minus + tf.matmul(self.v_bias, uu_plus) + lambda_v))
-        v_op = tf.assign(self.v, tf.multiply(self.v, sqrt))
+        v_op = tf.assign(self.v, self.v * sqrt)
         return v_op
     
     def matrix_loss(self, metric):
