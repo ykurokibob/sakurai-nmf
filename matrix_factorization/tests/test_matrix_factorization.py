@@ -133,16 +133,16 @@ def test_semi_nmf_no_bias():
 
 
 def test_semi_nmf_have_bias():
-    wrapper_nmf2(SemiNMF, use_bias=True)
+    wrapper_nmf(SemiNMF, use_bias=True)
 
 
 def main(_):
     # Compute too much time.
-    test_nonlinear_semi_nmf_no_bias()
+    # test_nonlinear_semi_nmf_no_bias()
     # test_nonlinear_semi_nmf_have_bias()
     
-    test_semi_nmf_no_bias()
-    
+    # test_semi_nmf_no_bias()
+    #
     # The loss would not be less.
     test_semi_nmf_have_bias()
  
