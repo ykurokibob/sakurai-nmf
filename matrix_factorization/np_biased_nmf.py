@@ -1,6 +1,6 @@
 import numpy as np
 
-from matrix_factorization.utility import _low_rank
+from matrix_factorization.utility import _low_rank, relu
 
 
 def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1):
@@ -50,25 +50,87 @@ def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1
     return u, v
 
 
+def _nonlin_solve(a, b, x, _lambda=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, solve_ax=True):
+    
+    _omega = 1.0
+    
+    def _solve_ax(x):
+        """
+         min_x || b - f(ax) ||
+        """
+        a_svd = _low_rank(a[:, :-1], rcond=1e-14)
+        u = a_svd.u
+        s = a_svd.s
+        v = a_svd.v
+        
+        n = a.shape[1]
+        bias = np.ones((x.shape[1], 1))
+        bias_x = np.vstack((x, bias.T))
+        _aa = a[:, :-1].T @ a[:, :-1]
+        u_svd = _low_rank(_aa, rcond=rcond)
+        
+        for _ in range(num_iters):
+            r = b - relu(a @ bias_x)
+            ur = u.T @ r
+            sur_solve = np.linalg.solve(s, ur)
+            x = x + _omega * (v @ sur_solve)
+            _eye = np.eye(n - 1)
+            su_solve = np.linalg.solve(u_svd.s, u_svd.u.T)
+            vsu = u_svd.v @ su_solve
+            _x = _eye + _lambda * vsu
+            x = np.linalg.solve(_x, x)
+            bias_x = np.vstack((x, bias.T))
+        return x
+    
+    def _solve_xa(x):
+        """
+         min_x || b - f(xa) ||
+        """
+        bias = np.ones((a.shape[1], 1))
+        _a = np.vstack((a, bias.T))
+        a_svd = _low_rank(_a, rcond=rcond)
+        u = a_svd.u
+        s = a_svd.s
+        v = a_svd.v
+        
+        bias = np.ones((a.shape[1], 1))
+        bias_x = np.vstack((a, bias.T))
+        for _ in range(num_iters):
+            r = b - relu(x @ bias_x)
+            rv = r @ v
+            s_inv = np.linalg.inv(s)
+            rvs = rv @ s_inv
+            x = x + _omega * (rvs @ u.T)
+            ss = np.diag(s)
+            ss = np.divide(
+                np.square(ss),
+                np.square(ss) + _lambda)
+            x = x @ (u @ np.diag(ss) @ u.T)
+        return x
+    
+    if solve_ax:
+        return _solve_ax(x)
+    else:
+        return _solve_xa(x)
+
+
 def nonlin_semi_nmf(a, u, v, alpha=1e2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1):
     """Biased Nonlinear Semi-NMF
     Args:
-        a:
-        u:
-        v:
+        a: original non-negative matrix factorized
+        u: biased-matrix
+        v: non-negative matrix
         alpha:
         beta:
         rcond:
         eps:
-        num_iters:
+        num_iters: number of iterations
 
     Returns:
 
     """
-    n = v.shape[1]
-    bias = np.ones((n, 1))
-    bias_v = np.vstack((v, bias.T))
-    ie = np.ones((n, n))
-    return bias_v, ie
-    # for _ in range(num_iters):
-    #     pass
+    for _ in range(num_iters):
+        u = _nonlin_solve(v, a, u, solve_ax=False)
+        v = _nonlin_solve(u, a, v, solve_ax=True)
+    return u, v
+    

@@ -40,7 +40,7 @@ def relu(x):
     return x * (x > 0)
 
 def _low_rank(a, rcond=1e-14):
-    u, s, vt = np.linalg.svd(a, full_matrices=False)
+    u, s, vt = np.linalg.svd(a, full_matrices=True)
     v = np.transpose(vt)
     _s = np.diag(s)
     _s = _s / np.max(_s)
