@@ -5,7 +5,7 @@ from __future__ import print_function
 import keras.backend.tensorflow_backend as K
 import tensorflow as tf
 
-from pinv import tf_pinv
+from pinv import tf_pinv, mat_pinv
 
 
 class MatrixFactorize(object):
@@ -52,8 +52,7 @@ class _SemiNMF(MatrixFactorize):
             self._initialize_matrix(self.inputs, v_shape, u_shape)
     
     def compute_u(self):
-        v_inv = tf_pinv(self.v, rcond=self.rcond)
-        u_op = tf.assign(self.u, tf.matmul(v_inv, self.target_y))
+        u_op = tf.assign(self.u, mat_pinv(self.v, self.target_y, rcond=self.rcond))
         return u_op, tf.no_op()
     
     def compute_v(self, u_op):
@@ -102,10 +101,11 @@ class _BiasSemiNMF(_SemiNMF):
         vv_shape = K.get_variable_shape(vv_inv)
         Jv = tf.add(tf.eye(*vv_shape), vv_inv)
         
-        v_inv = tf_pinv(self.v_bias, rcond=self.rcond)
+        # v_inv = tf_pinv(self.v_bias, rcond=self.rcond)
+        v_target = mat_pinv(self.v_bias, self.target_y, rcond=self.rcond)
         # https://www.tensorflow.org/api_docs/python/tf/matrix_solve_ls
         solver = tf.linalg.lstsq(
-            Jv, tf.matmul(v_inv, self.target_y), l2_regularizer=self.alpha)
+            Jv, v_target, l2_regularizer=self.alpha)
         u_op = tf.assign(self.u, tf.slice(solver, [0, 0], self.u_shape))
         bias_op = tf.assign(
             self.bias, tf.slice(input_=solver,
@@ -149,17 +149,19 @@ class _NonlinearSemiNMF(MatrixFactorize):
         """
         :return: U operation, and bias op(tf.no_op)
         """
-        v_inv = tf_pinv(self.v, rcond=self.rcond)
-        v_y = tf.matmul(v_inv, self.y_sub_vu)
+        # v_inv = tf_pinv(self.v, rcond=self.rcond)
+        # v_y = tf.matmul(v_inv, self.y_sub_vu)
+        v_y = mat_pinv(self.v, self.y_sub_vu, rcond=self.rcond)
         u_op = tf.assign_add(self.u, v_y)
         return u_op, tf.no_op
     
     def compute_v(self, u_op):
-        u_inv = tf_pinv(self.u, rcond=self.rcond)
         vu = tf.matmul(self.v, self.u)
         y_sub_vu = tf.subtract(self.target_y, self.activation(vu))
         # TODO: WHY CANNOT USE self.y_sub_vu
-        y_u = tf.matmul(y_sub_vu, u_inv)
+        # u_inv = tf_pinv(self.u, rcond=self.rcond)
+        # y_u = tf.matmul(y_sub_vu, u_inv)
+        y_u = mat_pinv(y_sub_vu, self.u, rcond=self.rcond, a_dagger=False)
         v_op = tf.assign(self.v, self.activation(tf.add(self.v, y_u)))
         return v_op
 
@@ -214,9 +216,10 @@ class _BiasNonlinearSNMF(_NonlinearSemiNMF):
         assert uu_shape[0] == uu_shape[1]
         Ju = tf.add(tf.eye(*uu_shape), uu_inv)
         
-        u_inv = tf_pinv(self.u, rcond=self.rcond)
+        # u_inv = tf_pinv(self.u, rcond=self.rcond)
         y_sub_f = tf.subtract(self.target_y, self.activation(tf.matmul(self.v_bias, self.u_bias)))
-        u_add_yu = tf.add(self.v, tf.matmul(y_sub_f, u_inv))
+        # u_add_yu = tf.add(self.v, tf.matmul(y_sub_f, u_inv))
+        u_add_yu = tf.add(self.v, mat_pinv(y_sub_f, self.u, rcond=self.rcond, a_dagger=False))
         solver = tf.assign(self.v, tf.matmul(u_add_yu, tf.linalg.inv(Ju)))
         v_op = tf.nn.relu(solver)
         return v_op

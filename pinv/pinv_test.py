@@ -3,7 +3,8 @@ import numpy as np
 import tensorflow as tf
 import tensorflow.contrib.eager as tfe
 
-from pinv.pinv import _pinv, tf_pinv
+from losses import frobenius_norm
+from pinv import tf_pinv
 
 # tfe.enable_eager_execution()
 
@@ -53,8 +54,21 @@ def tf_main():
     # np.testing.assert_almost_equal(np.linalg.pinv(ta) @ ta, np.eye(ta.shape[0]))
 
 
+def test_tf_pinv():
+    a1 = tf.random_uniform([50, 100], -1, 1)
+    import scipy.io as sio
+    a1 = tf.constant(sio.loadmat('test_random.mat')['mat'])
+    
+    a1_inv = tf_pinv(a1)
+    
+    muled_a = a1 @ a1_inv @ a1
+    loss = frobenius_norm(a1, muled_a)
+    print('loss', loss)
+
+
+def main(_):
+    test_tf_pinv()
 
 if __name__ == '__main__':
-  # print("=============" * 3)
-  # tfe_main()
-  tf_main()
+    tf.enable_eager_execution()
+    tf.app.run()

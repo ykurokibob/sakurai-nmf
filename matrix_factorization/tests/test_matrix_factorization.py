@@ -36,7 +36,7 @@ def wrapper_nmf(nmf_class, use_bias=False, minval=0):
         global_start_time = time.time()
         local_duration = 0
         
-        num_iters = 2
+        num_iters = 10
         for _ in range(num_iters):
             
             time.sleep(0.5)
@@ -66,8 +66,41 @@ def wrapper_nmf(nmf_class, use_bias=False, minval=0):
         global_end_time = time.time()
         duration = global_end_time - global_start_time - (0.5 * 3 * num_iters) - local_duration
         print('Duration compute other process: {}'.format(duration))
-        
 
+
+
+def wrapper_nmf2(nmf_class, use_bias=False, minval=0):
+    print("")
+    target = tf.placeholder(tf.float32, [1000, 500])
+    mf = nmf_class(target, (1000, 784), (784, 500), use_bias=use_bias)
+    u_op, v_op, bias_op, loss_op = mf.factorize()
+    init = tf.global_variables_initializer()
+    import scipy.io as sio
+    if minval == 0:
+        mat = sio.loadmat('test_non_nega_random.mat')
+        a = mat['mat']
+    else:
+        mat = sio.loadmat('test_random.mat')
+        a = mat['mat']
+    with tf.Session() as sess:
+        init.run()
+        
+        global_start_time = time.time()
+        local_duration = 0
+        
+        num_iters = 2
+        for _ in range(num_iters):
+            
+            for _ in range(100):
+                _ = sess.run([v_op], feed_dict={mf.target_y: a})
+            _ = sess.run([u_op], feed_dict={mf.target_y: a})
+            loss = sess.run(loss_op, feed_dict={mf.target_y: a})
+            
+            print('loss {}'.format(loss))
+        
+        global_end_time = time.time()
+        duration = global_end_time - global_start_time
+        print('Duration compute processes: {}'.format(duration))
 
 def nonlinear_semi_nmf():
     tf.reset_default_graph()
@@ -88,26 +121,30 @@ def nonlinear_semi_nmf():
 
 
 def test_nonlinear_semi_nmf_no_bias():
-    wrapper_nmf(NonlinearSemiNMF, use_bias=False)
+    wrapper_nmf2(NonlinearSemiNMF, use_bias=False)
 
 
 def test_nonlinear_semi_nmf_have_bias():
-    wrapper_nmf(NonlinearSemiNMF, use_bias=True)
+    wrapper_nmf2(NonlinearSemiNMF, use_bias=True)
 
 
 def test_semi_nmf_no_bias():
-    wrapper_nmf(SemiNMF, use_bias=False)
+    wrapper_nmf2(SemiNMF, use_bias=False)
 
 
 def test_semi_nmf_have_bias():
-    wrapper_nmf(SemiNMF, use_bias=True)
+    wrapper_nmf2(SemiNMF, use_bias=True)
 
 
 def main(_):
-    # test_semi_nmf_no_bias()
-    # test_nonlinear_semi_nmf_no_bias()
+    # Compute too much time.
+    test_nonlinear_semi_nmf_no_bias()
+    # test_nonlinear_semi_nmf_have_bias()
+    
     test_semi_nmf_no_bias()
-    # test_semi_nmf_have_bias()
+    
+    # The loss would not be less.
+    test_semi_nmf_have_bias()
  
 
 if __name__ == '__main__':
