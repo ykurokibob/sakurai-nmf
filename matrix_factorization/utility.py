@@ -1,3 +1,9 @@
+"""Utility for construct algorithms"""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import contextlib
 
 import numpy as np
@@ -39,6 +45,7 @@ class AttrDict(dict):
 def relu(x):
     return x * (x > 0)
 
+
 def _low_rank(a, rcond=1e-14):
     u, s, vt = np.linalg.svd(a, full_matrices=True)
     v = np.transpose(vt)
@@ -50,4 +57,3 @@ def _low_rank(a, rcond=1e-14):
     s = np.diag(s)[:k, :k]
     v = v[:, :k]
     return AttrDict(u=u, s=s, v=v)
-

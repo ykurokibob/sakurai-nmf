@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import time
 
 import numpy as np
@@ -201,7 +205,9 @@ def test_tf_biased_nonlin_semi_nmf():
     bias_u_ph = tf.placeholder(tf.float64, shape=bias_u.shape)
     v_ph = tf.placeholder(tf.float64, shape=v.shape)
     
-    tf_bias_u, tf_v = nonlin_semi_nmf(a_ph, bias_u_ph, v_ph, use_bias=True, use_tf=True)
+    tf_bias_u, tf_v = nonlin_semi_nmf(a_ph, bias_u_ph, v_ph,
+                                      num_calc_v=0,
+                                      use_bias=True, use_tf=True)
     
     init = tf.global_variables_initializer()
     with tf.Session() as sess:

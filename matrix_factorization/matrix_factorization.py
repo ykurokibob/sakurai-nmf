@@ -1,3 +1,9 @@
+"""Interface of semi-NMF and Nonlinear semi-NMF"""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import functools
 import numpy as np
 import tensorflow as tf
@@ -103,7 +109,7 @@ def nonlin_semi_nmf(a, u, v,
     
     if isinstance(a, np.ndarray) and not use_tf:
         return _nonlin_semi_nmf(a=a, u=u, v=v)
-
+    
     tf_u, tf_v = tf.py_func(_nonlin_semi_nmf, [a, u, v], [tf.float64, tf.float64])
-
+    
     return tf_u, tf_v
