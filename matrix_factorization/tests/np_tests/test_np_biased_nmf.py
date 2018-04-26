@@ -13,7 +13,8 @@ def test_large_semi_nmf():
     a, u, v = auv['a'], auv['u'], auv['v']
     
     old_loss = np_frobenius_norm(a, u @ v)
-    
+
+    # a[1000, 5000] = u[1000, 501] x v[500, 5000]
     u = np.hstack((u, np.ones((u.shape[0], 1))))
     start_time = time.time()
     

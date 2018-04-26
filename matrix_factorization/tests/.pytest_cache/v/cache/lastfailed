@@ -7,5 +7,6 @@
   "np_tests/test_np_nmf.py::test_large_semi_nmf": true,
   "np_tests/test_np_nmf.py::test_semi_nmf": true,
   "np_tests/test_np_nmf.py::test_solve_ax": true,
-  "np_tests/test_np_nmf.py::test_solve_xa": true
+  "np_tests/test_np_nmf.py::test_solve_xa": true,
+  "test_matrix_factorization.py::test_semi_nmf": true
 }

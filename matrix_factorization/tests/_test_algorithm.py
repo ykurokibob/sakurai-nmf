@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-from matrix_factorization.algorithm import MatrixFactorize
-from matrix_factorization.algorithm import _BiasNonlinearSNMF
+from matrix_factorization._algorithm import MatrixFactorize
+from matrix_factorization._algorithm import _BiasNonlinearSNMF
 
 
 def test_matrix_fact():

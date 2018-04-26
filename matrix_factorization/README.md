@@ -7,7 +7,7 @@
 + [x] Use this Nonlinear-sNMF for NMF-NeuralNets.
 + [x] faster...(so far, fucking slow)
 
-### biased Nonlinear semi-NMF with TensorFlow
+### Example Nonlinear semi-NMF
 
 ```python
 def test_u_neg_nonlin_semi_nmf():
@@ -39,11 +39,47 @@ def test_u_neg_nonlin_semi_nmf():
           'process duration {2}'.format(old_loss, new_loss, duration))
  ```
 
+### Results of test_matrix_factorization.py
 
 ```python
-solve Nonlinear semi-NMF
-	old loss 15270.320488460004
-	new loss 0.7154995132441608
-	process duration 0.544182300567627
+[Numpy]Solve semi-NMF
+	old loss 338.7211354286444
+	new loss 2.531794131273001e-15
+	process duration 0.22645926475524902
+.
+[Numpy]Solve Nonlinear semi-NMF
+	old loss 338.7211354286444
+	new loss 0.0002981372559180241
+	process duration 0.18893766403198242
+.
+[Numpy]Solve biased semi-NMF
+	old loss 338.7211354286444
+	new loss 8.872548363465481e-14
+	process duration 0.37479066848754883
+.
+[Numpy]Solve biased Nonlinear semi-NMF
+	old loss 338.7211354286444
+	new loss 0.013125810643673044
+	process duration 0.518439531326294
+.
+[TensorFlow]Solve semi-NMF
+	old loss 338.7211354286444
+	new loss 2.5985280482743766e-15
+	process duration 0.34461069107055664
+.
+[TensorFlow]Solve biased semi-NMF
+	old loss 338.7211354286444
+	new loss 0.0002981372559180241
+	process duration 0.20970702171325684
+.
+[TensorFlow]Solve Nonlinear semi-NMF
+	old loss 338.7211354286444
+	new loss 8.874093318886518e-14
+	process duration 0.3893768787384033
+.
+[TensorFlow]Solve biased Nonlinear semi-NMF
+	old loss 338.7211354286444
+	new loss 0.013125810643673044
+	process duration 0.5391981601715088
 ```
 

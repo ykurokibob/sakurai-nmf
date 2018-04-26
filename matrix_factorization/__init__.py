@@ -1,1 +1,1 @@
-from matrix_factorization.matrix_factorization import *
+from matrix_factorization.matrix_factorization import semi_nmf, nonlin_semi_nmf

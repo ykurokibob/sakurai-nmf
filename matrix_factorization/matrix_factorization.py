@@ -1,130 +1,109 @@
-import keras.backend.tensorflow_backend as K
+import functools
+import numpy as np
 import tensorflow as tf
 
-from exception import MatrixFactorizationError
-from losses import frobenius_norm
-from matrix_factorization.algorithm import \
-  _SemiNMF, _NonlinearSemiNMF, _BiasNonlinearSNMF, _BiasSemiNMF, MatrixFactorize
 
+def semi_nmf(a, u, v,
+             use_bias=False,
+             use_tf=False,
+             num_iters=1,
+             rcond=1e-14,
+             eps=1e-15,
+             alpha=1e-2,
+             beta=1e-2):
+    """Semi-NMF
+    Args:
+        a: Original matrix factorized
+        u: Left matrix
+        v: Non-negative matrix
+        use_bias: Use bias
+        use_tf: When use Tensorflow, `a` should be instance of tf.placeholder
+        num_iters: Number of iterations
+        rcond: Reciprocal condition number
+        eps:
+        alpha: Coefficient for solve u.
+        beta: Coefficient for solve v.
 
-# TODO Replace v_shape and u_shape
-class MatrixFactorizeInterface(object):
-
-  def __init__(self,
-               target_y,
-               v_shape, u_shape,
-               metric=frobenius_norm,
-               rcond=1e-3,
-               activation=tf.identity,
-               use_bias=True,
-               is_first=False,
-               inputs=None,
-               name=0):
+    Returns:
+        When use TensorFlow, it returns operation u and v solved.
+        When use NumPy, it returns results of u and v.
     """
-    :param target_y: Target Matrix factorized.
-    :param v_shape: Weights Matrix's shape.
-    :param u_shape: Non-negative Matrix's shape.
-    :param metric: Evaluate relative residual.
-    :param rcond: cutoff parameter of pinv
-    :param activation: Activation Function
-    :param use_bias: bool, whether use bias or not.
-    :param is_first: is first layer or not.
-    :param inputs: Use only at first layer.
-    :param name: Pointer
-    """
-    self.target_y = target_y
-    self.v_shape = v_shape
-    self.u_shape = u_shape
-
-    self.metric = metric
-    self.rcond = rcond
-    self.activation = activation
-    self.use_bias = use_bias
-    self.is_first = is_first
-    self.name = self.__class__.__name__ + "_{0}".format(name)
-    self.inputs = inputs
-
-    # local matrix factorization steps.
-    self.i = K.variable(0)
-
-    # Matrix Factorization algorithm.
-    self.algorithm = None
-
-  def factorize(self):
-    if not isinstance(self.algorithm, MatrixFactorize):
-      raise MatrixFactorizationError("algorithm uninitialized.")
-
-    # Define factorize operations.
-    with tf.name_scope(self.name):
-      with tf.name_scope('compute_u'):
-        u_op, bias_op = self.algorithm.compute_u()
-
-      with tf.name_scope('compute_v'):
-        # If first layer, no need to compute v
-        if not self.is_first:
-          v_op = self.algorithm.compute_v(u_op)
-        else:
-          v_op = tf.no_op()
-
-      # Calculate a loss.
-      with tf.name_scope('factorize_metric'):
-        loss = self.algorithm.matrix_loss(self.metric)
-
-      tf.summary.histogram('u_op', u_op)
-      tf.summary.histogram('v_op', v_op)
-      if self.use_bias:
-        tf.summary.histogram('bias_op', bias_op)
-      tf.summary.scalar('fact_loss', loss)
-      return u_op, v_op, bias_op, loss
-
-
-class SemiNMF(MatrixFactorizeInterface):
-
-  def __init__(self,
-               target_y,
-               v_shape, u_shape,
-               **kwargs):
-    super(SemiNMF, self).__init__(target_y, v_shape, u_shape, **kwargs)
-    self.u_iter = 1
-    self.v_iter = 1
-
-    if not self.use_bias:
-      self.algorithm = _SemiNMF(target_y=target_y,
-                                u_shape=u_shape,
-                                v_shape=v_shape,
-                                name=self.name,
-                                inputs=self.inputs)
+    if use_bias:
+        from matrix_factorization.np_biased_nmf import semi_nmf as semi_nmf_
+        _semi_nmf = functools.partial(semi_nmf_,
+                                      alpha=alpha,
+                                      beta=beta,
+                                      rcond=rcond,
+                                      eps=eps,
+                                      num_iters=num_iters,
+                                      )
     else:
-      self.algorithm = _BiasSemiNMF(target_y=target_y,
-                                    u_shape=u_shape,
-                                    v_shape=v_shape,
-                                    name=self.name,
-                                    inputs=self.inputs)
+        from matrix_factorization.np_nmf import semi_nmf as semi_nmf_
+        _semi_nmf = functools.partial(semi_nmf_,
+                                      rcond=rcond,
+                                      eps=eps,
+                                      num_iters=num_iters,
+                                      )
+    if isinstance(a, np.ndarray) and not use_tf:
+        return _semi_nmf(a=a, u=u, v=v)
+    
+    tf_u, tf_v = tf.py_func(_semi_nmf, [a, u, v], [tf.float64, tf.float64])
+    
+    return tf_u, tf_v
 
 
-class NonlinearSemiNMF(MatrixFactorizeInterface):
+def nonlin_semi_nmf(a, u, v,
+                    use_bias=False,
+                    use_tf=False,
+                    num_iters=1,
+                    num_calc_u=1,
+                    num_calc_v=1,
+                    rcond=1e-14,
+                    eps=1e-15,
+                    alpha=1e-2,
+                    beta=1e-2):
+    """Nonlinear Semi-NMF
+    Args:
+        a: Original matrix factorized
+        u: Left matrix
+        v: Non-negative matrix
+        use_bias: Use bias
+        use_tf: When use Tensorflow, `a` should be instance of tf.placeholder
+        num_iters: Number of iterations
+        rcond: Reciprocal condition number
+        num_calc_u: Number of calculating u.
+        num_calc_v: Number of calculating v.
+        eps:
+        alpha: Coefficient for solve u.
+        beta: Coefficient for solve v.
 
-  def __init__(self,
-               target_y,
-               v_shape, u_shape,
-               activation=tf.nn.relu,
-               **kwargs):
+    Returns:
+
     """
-    :param activation: ReLU
-    """
-    super(NonlinearSemiNMF, self).__init__(target_y, v_shape, u_shape, activation=activation, **kwargs)
-    self.u_iter = 10
-    self.v_iter = 1
-
-    if not self.use_bias:
-      self.algorithm = _NonlinearSemiNMF(target_y=target_y,
-                                         u_shape=u_shape,
-                                         v_shape=v_shape,
-                                         name=self.name,
-                                         inputs=self.inputs)
+    if use_bias:
+        from matrix_factorization.np_biased_nmf import nonlin_semi_nmf as nonlin_semi_nmf_
+        _nonlin_semi_nmf = functools.partial(nonlin_semi_nmf_,
+                                             alpha=alpha,
+                                             beta=beta,
+                                             rcond=rcond,
+                                             eps=eps,
+                                             num_iters=num_iters,
+                                             num_calc_u=num_calc_u,
+                                             num_calc_v=num_calc_v,
+                                             )
     else:
-      self.algorithm = _BiasNonlinearSNMF(target_y=target_y,
-                                          u_shape=u_shape,
-                                          v_shape=v_shape,
-                                          name=self.name,
-                                          inputs=self.inputs)
+        from matrix_factorization.np_nmf import nonlin_semi_nmf as nonlin_semi_nmf_
+        _nonlin_semi_nmf = functools.partial(nonlin_semi_nmf_,
+                                             rcond=rcond,
+                                             eps=eps,
+                                             num_iters=num_iters,
+                                             num_calc_u=num_calc_u,
+                                             num_calc_v=num_calc_v,
+                                             )
+    
+    if isinstance(a, np.ndarray) and not use_tf:
+        return _nonlin_semi_nmf(a=a, u=u, v=v)
+
+    tf_u, tf_v = tf.py_func(_nonlin_semi_nmf, [a, u, v], [tf.float64, tf.float64])
+
+    return tf_u, tf_v

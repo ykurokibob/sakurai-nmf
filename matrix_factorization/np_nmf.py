@@ -3,7 +3,7 @@ import numpy as np
 from matrix_factorization.utility import _low_rank, relu
 
 
-def semi_nmf(a, u, v, rcond=1e-14, eps=1e-15):
+def semi_nmf(a, u, v, rcond=1e-14, eps=1e-15, num_iters=1):
     """Semi-NMF
     Args:
         a: Original matrix factorized
@@ -15,27 +15,28 @@ def semi_nmf(a, u, v, rcond=1e-14, eps=1e-15):
     Returns:
         u, v
     """
-    svd = _low_rank(v, rcond=rcond)
-    u_t = np.transpose(svd.u)
-    _v = svd.v
-    s_inv = np.linalg.inv(svd.s)
-    u = ((a @ _v) @ s_inv) @ u_t
-    
-    u_t = np.transpose(u)
-    uta = u_t @ a
-    u_ta_p = (np.abs(uta) + uta) * 0.5
-    u_ta_m = (np.abs(uta) - uta) * 0.5
-    utu = u_t @ u
-    u_tu_p = (np.abs(utu) + utu) * 0.5
-    u_tu_m = (np.abs(utu) - utu) * 0.5
-    
-    uvm = u_tu_m @ v
-    uvp = u_tu_p @ v
-    sqrt = np.sqrt(
-        np.divide(u_ta_p + uvm,
-                  u_ta_m + uvp + eps)
-    )
-    v = np.multiply(v, sqrt)
+    for _ in range(num_iters):
+        svd = _low_rank(v, rcond=rcond)
+        u_t = np.transpose(svd.u)
+        _v = svd.v
+        s_inv = np.linalg.inv(svd.s)
+        u = ((a @ _v) @ s_inv) @ u_t
+        
+        u_t = np.transpose(u)
+        uta = u_t @ a
+        u_ta_p = (np.abs(uta) + uta) * 0.5
+        u_ta_m = (np.abs(uta) - uta) * 0.5
+        utu = u_t @ u
+        u_tu_p = (np.abs(utu) + utu) * 0.5
+        u_tu_m = (np.abs(utu) - utu) * 0.5
+        
+        uvm = u_tu_m @ v
+        uvp = u_tu_p @ v
+        sqrt = np.sqrt(
+            np.divide(u_ta_p + uvm,
+                      u_ta_m + uvp + eps)
+        )
+        v = np.multiply(v, sqrt)
     
     return u, v
 

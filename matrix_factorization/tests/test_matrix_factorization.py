@@ -1,151 +1,222 @@
-import numpy as np
-import tensorflow as tf
-
-from matrix_factorization.matrix_factorization import NonlinearSemiNMF, SemiNMF
-
-np.random.seed(42)
-tf.set_random_seed(42)
-
 import time
 
-def test_initializer():
-    print()
-    target_y = tf.random_uniform(shape=(6000, 500), maxval=1)
-    v_shape = (6000, 784)
-    u_shape = (784, 500)
-    print("not use bias")
-    mf = NonlinearSemiNMF(target_y=target_y, v_shape=v_shape, u_shape=u_shape, use_bias=False, name='1')
-    mf = SemiNMF(target_y=target_y, v_shape=v_shape, u_shape=u_shape, use_bias=False, name='2')
-    print("use bias")
-    mf = NonlinearSemiNMF(target_y=target_y, v_shape=v_shape, u_shape=u_shape, name='3')
-    mf = SemiNMF(target_y=target_y, v_shape=v_shape, u_shape=u_shape, name='4')
+import numpy as np
+import scipy.io as sio
+import tensorflow as tf
+
+from losses import frobenius_norm, np_frobenius_norm
+from matrix_factorization import nonlin_semi_nmf, semi_nmf
 
 
-def wrapper_nmf(nmf_class, use_bias=False, minval=0):
-    print("")
-    target = tf.placeholder(tf.float32, [1000, 500])
-    mf = nmf_class(target, (1000, 784), (784, 500), use_bias=use_bias)
-    u_op, v_op, bias_op, loss_op = mf.factorize()
+def test_np_vanilla_semi_nmf():
+    auv = sio.loadmat('./np_tests/large.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    old_loss = np_frobenius_norm(a, u @ v)
+    
+    start_time = time.time()
+    
+    u, v = semi_nmf(a, u, v, use_bias=False)
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    new_loss = np_frobenius_norm(a, u @ v)
+    assert a.shape == (u @ v).shape
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('\n[Numpy]Solve semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))
+
+
+def test_np_biased_semi_nmf():
+    auv = sio.loadmat('./np_tests/large.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    old_loss = np_frobenius_norm(a, u @ v)
+    
+    u = np.hstack((u, np.ones((u.shape[0], 1))))
+    start_time = time.time()
+    
+    u, v = semi_nmf(a, u, v, use_bias=True)
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
+    
+    new_loss = np_frobenius_norm(a, u @ bias_v)
+    assert a.shape == (u @ bias_v).shape
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('\n[Numpy]Solve Nonlinear semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))
+
+
+def test_np_vanilla_nonlin_semi_nmf():
+    auv = sio.loadmat('./np_tests/large.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    old_loss = np_frobenius_norm(a, u @ v)
+    
+    start_time = time.time()
+    
+    u, v = nonlin_semi_nmf(a, u, v, use_bias=False)
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    new_loss = np_frobenius_norm(a, u @ v)
+    assert a.shape == (u @ v).shape
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('\n[Numpy]Solve biased semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))
+
+
+def test_np_biased_nonlin_semi_nmf():
+    auv = sio.loadmat('./np_tests/large.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    old_loss = np_frobenius_norm(a, u @ v)
+    
+    biased_u = np.hstack((u, np.ones((u.shape[0], 1))))
+    start_time = time.time()
+    
+    biased_u, v = nonlin_semi_nmf(a, biased_u, v, use_bias=True)
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
+    
+    new_loss = np_frobenius_norm(a, biased_u @ bias_v)
+    assert a.shape == (biased_u @ bias_v).shape
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('\n[Numpy]Solve biased Nonlinear semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))
+
+
+def test_tf_vanilla_semi_nmf():
+    auv = sio.loadmat('./np_tests/large.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    old_loss = np_frobenius_norm(a, u @ v)
+    
+    # [1000, 500]
+    a_ph = tf.placeholder(tf.float64, shape=a.shape)
+    # [1000, 201]
+    u_ph = tf.placeholder(tf.float64, shape=u.shape)
+    # [200, 500]
+    v_ph = tf.placeholder(tf.float64, shape=v.shape)
+    tf_u, tf_v = semi_nmf(a_ph, u_ph, v_ph, use_tf=True)
+    tf_loss = frobenius_norm(a_ph, tf.matmul(tf_u, tf_v))
+    
     init = tf.global_variables_initializer()
-    import scipy.io as sio
-    mat = sio.loadmat('test_random.mat')
-    a = mat['mat']
     with tf.Session() as sess:
         init.run()
         
-        global_start_time = time.time()
-        local_duration = 0
-        
-        num_iters = 10
-        for _ in range(num_iters):
-            
-            time.sleep(0.5)
-            
-            start_time = time.time()
-            _ = sess.run([u_op], feed_dict={mf.target_y: a})
-            u_duration = time.time() - start_time
-            local_duration += u_duration
-            print('Duration compute u: {}'.format(u_duration))
-            
-            time.sleep(0.5)
-            
-            start_time = time.time()
-            _ = sess.run([v_op], feed_dict={mf.target_y: a})
-            v_duration = time.time() - start_time
-            local_duration += v_duration
-            print('Duration compute v: {}'.format(v_duration))
-            
-            time.sleep(0.5)
-            
-            start_time = time.time()
-            loss = sess.run([loss_op], feed_dict={mf.target_y: a})
-            loss_duration = time.time() - start_time
-            local_duration += loss_duration
-            print('Duration compute loss: {}, loss: {}'.format(loss_duration, loss))
-        
-        global_end_time = time.time()
-        duration = global_end_time - global_start_time - (0.5 * 3 * num_iters) - local_duration
-        print('Duration compute other process: {}'.format(duration))
-
-
-
-def wrapper_nmf2(nmf_class, use_bias=False, minval=0):
-    print("")
-    target = tf.placeholder(tf.float32, [1000, 500])
-    mf = nmf_class(target, (1000, 784), (784, 500), use_bias=use_bias)
-    u_op, v_op, bias_op, loss_op = mf.factorize()
-    init = tf.global_variables_initializer()
-    import scipy.io as sio
-    if minval == 0:
-        mat = sio.loadmat('test_non_nega_random.mat')
-        a = mat['mat']
-    else:
-        mat = sio.loadmat('test_random.mat')
-        a = mat['mat']
-    with tf.Session() as sess:
-        init.run()
-        
-        global_start_time = time.time()
-        local_duration = 0
-        
-        num_iters = 2
-        for _ in range(num_iters):
-            
-            for _ in range(100):
-                _ = sess.run([v_op], feed_dict={mf.target_y: a})
-            _ = sess.run([u_op], feed_dict={mf.target_y: a})
-            loss = sess.run(loss_op, feed_dict={mf.target_y: a})
-            
-            print('loss {}'.format(loss))
-        
-        global_end_time = time.time()
-        duration = global_end_time - global_start_time
-        print('Duration compute processes: {}'.format(duration))
-
-def nonlinear_semi_nmf():
-    tf.reset_default_graph()
-    target = tf.placeholder(tf.float32, [1000, 500])
-    mf = NonlinearSemiNMF(target, (1000, 784), (784, 500), use_bias=True)
-    u_op, v_op, bias_op, loss_op = mf.factorize()
+        start_time = time.time()
+        _u, _v, new_loss = sess.run([tf_u, tf_v, tf_loss], feed_dict={a_ph: a, u_ph: u, v_ph: v})
+        end_time = time.time()
     
-    a = np.random.uniform(0, 1, size=[1000, 500])
+    duration = end_time - start_time
+    assert a.shape == (_u @ _v).shape
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('\n[TensorFlow]Solve semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))
+
+
+def test_tf_biased_semi_nmf():
+    auv = sio.loadmat('./np_tests/large.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    bias_u = np.hstack((u, np.ones((u.shape[0], 1))))
+    old_loss = np_frobenius_norm(a, u @ v)
+    
+    a_ph = tf.placeholder(tf.float64, shape=a.shape)
+    bias_u_ph = tf.placeholder(tf.float64, shape=bias_u.shape)
+    v_ph = tf.placeholder(tf.float64, shape=v.shape)
+    
+    tf_bias_u, tf_v = semi_nmf(a_ph, bias_u_ph, v_ph, use_bias=True, use_tf=True)
     
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         init.run()
-        for i in range(10):
-            _, loss = sess.run([u_op, loss_op], feed_dict={mf.target_y: a})
-            print("loss", loss)
-        _, loss = sess.run([v_op, loss_op], feed_dict={mf.target_y: a})
-        print("loss", loss)
-
-
-def test_nonlinear_semi_nmf_no_bias():
-    wrapper_nmf2(NonlinearSemiNMF, use_bias=False)
-
-
-def test_nonlinear_semi_nmf_have_bias():
-    wrapper_nmf2(NonlinearSemiNMF, use_bias=True)
-
-
-def test_semi_nmf_no_bias():
-    wrapper_nmf2(SemiNMF, use_bias=False)
-
-
-def test_semi_nmf_have_bias():
-    wrapper_nmf(SemiNMF, use_bias=True)
-
-
-def main(_):
-    # Compute too much time.
-    # test_nonlinear_semi_nmf_no_bias()
-    # test_nonlinear_semi_nmf_have_bias()
+        
+        start_time = time.time()
+        _bias_u, _v = sess.run([tf_bias_u, tf_v], feed_dict={a_ph: a, bias_u_ph: bias_u, v_ph: v})
+        end_time = time.time()
     
-    # test_semi_nmf_no_bias()
-    #
-    # The loss would not be less.
-    test_semi_nmf_have_bias()
- 
+    duration = end_time - start_time
+    _bias_v = np.vstack((_v, np.ones((1, v.shape[1]))))
+    new_loss = np_frobenius_norm(a, _bias_u @ _bias_v)
+    assert a.shape == (_bias_u @ _bias_v).shape
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('\n[TensorFlow]Solve biased semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))
 
-if __name__ == '__main__':
-    tf.app.run()
+
+def test_tf_nonlin_semi_nmf():
+    auv = sio.loadmat('./np_tests/large.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    old_loss = np_frobenius_norm(a, u @ v)
+    
+    # [1000, 500]
+    a_ph = tf.placeholder(tf.float64, shape=a.shape)
+    # [1000, 201]
+    u_ph = tf.placeholder(tf.float64, shape=u.shape)
+    # [200, 500]
+    v_ph = tf.placeholder(tf.float64, shape=v.shape)
+    tf_u, tf_v = nonlin_semi_nmf(a_ph, u_ph, v_ph, use_tf=True)
+    tf_loss = frobenius_norm(a_ph, tf.matmul(tf_u, tf_v))
+    
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        init.run()
+        
+        start_time = time.time()
+        _u, _v, new_loss = sess.run([tf_u, tf_v, tf_loss], feed_dict={a_ph: a, u_ph: u, v_ph: v})
+        end_time = time.time()
+    
+    duration = end_time - start_time
+    assert a.shape == (_u @ _v).shape
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('\n[TensorFlow]Solve Nonlinear semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))
+
+
+def test_tf_biased_nonlin_semi_nmf():
+    auv = sio.loadmat('./np_tests/large.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    bias_u = np.hstack((u, np.ones((u.shape[0], 1))))
+    old_loss = np_frobenius_norm(a, u @ v)
+    
+    a_ph = tf.placeholder(tf.float64, shape=a.shape)
+    bias_u_ph = tf.placeholder(tf.float64, shape=bias_u.shape)
+    v_ph = tf.placeholder(tf.float64, shape=v.shape)
+    
+    tf_bias_u, tf_v = nonlin_semi_nmf(a_ph, bias_u_ph, v_ph, use_bias=True, use_tf=True)
+    
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        init.run()
+        
+        start_time = time.time()
+        _bias_u, _v = sess.run([tf_bias_u, tf_v], feed_dict={a_ph: a, bias_u_ph: bias_u, v_ph: v})
+        end_time = time.time()
+    
+    duration = end_time - start_time
+    _bias_v = np.vstack((_v, np.ones((1, v.shape[1]))))
+    new_loss = np_frobenius_norm(a, _bias_u @ _bias_v)
+    assert a.shape == (_bias_u @ _bias_v).shape
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('\n[TensorFlow]Solve biased Nonlinear semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))
