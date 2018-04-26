@@ -8,9 +8,11 @@ import tensorflow as tf
 
 def frobenius_norm(original_x, muled_y):
     losses = original_x - muled_y
-    losses = tf.norm(losses) / tf.norm(original_x)
-    return losses
+    loss = tf.norm(losses) / tf.norm(original_x)
+    return loss
 
 
-def np_frobenius_norm(x, y):
-  return np.linalg.norm(x - y) / np.linalg.norm(y)
+def np_frobenius_norm(original_x, muled_y):
+    losses = original_x - muled_y
+    loss = np.linalg.norm(losses) / np.linalg.norm(original_x)
+    return loss
