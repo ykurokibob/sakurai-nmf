@@ -3,42 +3,47 @@
 ## Implement
 
 + [x] Vanilla NMF with TF and Numpy.
-+ [ ] **NOT convergence to epslion(<1e-8).**
-+ [ ] Use this Nonlinear-sNMF for NMF-NeuralNets.
-+ [ ] faster...(so far, fucking slow)
++ [x] **NOT convergence to epslion(<1e-8).**
++ [x] Use this Nonlinear-sNMF for NMF-NeuralNets.
++ [x] faster...(so far, fucking slow)
 
 ### biased Nonlinear semi-NMF with TensorFlow
 
 ```python
-target = K.variable(tf.random_uniform(shape=(6000, 10), maxval=1), name="y_target")
-mf = BiasNSNMF(target, (6000, 100), (100, 10))
-mf2 = BiasNSNMF(mf.u, (6000, 784), (784, 100))
-```
+def test_u_neg_nonlin_semi_nmf():
+    auv = sio.loadmat('u_neg.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    
+    old_loss = np_frobenius_norm(a, u @ v)
+    
+    a_ph = tf.placeholder(tf.float64, shape=a.shape)
+    u_ph = tf.placeholder(tf.float64, shape=u.shape)
+    v_ph = tf.placeholder(tf.float64, shape=v.shape)
+    tf_u, tf_v = tf.py_func(nonlin_semi_nmf, [a_ph, u_ph, v_ph], [tf.float64, tf.float64])
+    tf_loss = frobenius_norm(a_ph, tf.nn.relu(tf_u @ tf_v))
+    
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        init.run()
+        
+        start_time = time.time()
+        _u, _v, new_loss = sess.run([tf_u, tf_v, tf_loss], feed_dict={a_ph: a, u_ph: u, v_ph: v})
+        end_time = time.time()
+    
+    duration = end_time - start_time
+    assert a.shape == (_u @ _v).shape
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('solve Nonlinear semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))
+ ```
 
 
 ```python
-$ python test_mf_bias_nsnmf.py         *[master]
-BiasNSNMF.loss = 0.9182373285293579 / 0
-BiasNSNMF.loss = 0.7949256300926208 / 1
-BiasNSNMF.loss = 0.5727155804634094 / 2
-BiasNSNMF.loss = 0.45173755288124084 / 3
-BiasNSNMF.loss = 0.41608870029449463 / 4
-BiasNSNMF.loss = 0.4731375277042389 / 5
-BiasNSNMF.loss = 0.477230429649353 / 6
-BiasNSNMF.loss = 0.5276081562042236 / 7
-BiasNSNMF.loss = 0.5181043148040771 / 8
-BiasNSNMF.loss = 0.554600715637207 / 9
-End...
-BiasNSNMF.loss = 1.0434532165527344 / 0
-BiasNSNMF.loss = 1.1263998746871948 / 1
-BiasNSNMF.loss = 1.4292962551116943 / 2
-BiasNSNMF.loss = 1.8919872045516968 / 3
-BiasNSNMF.loss = 2.3239381313323975 / 4
-BiasNSNMF.loss = 2.7060446739196777 / 5
-BiasNSNMF.loss = 3.077836751937866 / 6
-BiasNSNMF.loss = 3.443369150161743 / 7
-BiasNSNMF.loss = 3.8079569339752197 / 8
-BiasNSNMF.loss = 4.1690897941589355 / 9
-End...
+solve Nonlinear semi-NMF
+	old loss 15270.320488460004
+	new loss 0.7154995132441608
+	process duration 0.544182300567627
 ```
 
