@@ -6,10 +6,10 @@ from matrix_factorization.utility import _low_rank, relu
 def semi_nmf(a, u, v, rcond=1e-14, eps=1e-15):
     """Semi-NMF
     Args:
-        a: original matrix factorized
-        u: left matrix
-        v: non-negative matrix
-        rcond:
+        a: Original matrix factorized
+        u: Left matrix
+        v: Non-negative matrix
+        rcond: Reciprocal condition number
         eps:
 
     Returns:
@@ -40,8 +40,13 @@ def semi_nmf(a, u, v, rcond=1e-14, eps=1e-15):
     return u, v
 
 
-def _nonlin_solve(a, b, x, num_iters, solve_ax=True):
-    a_svd = _low_rank(a)
+def _nonlin_solve(a, b, x, rcond=1e-14, num_iters=1, solve_ax=True):
+    """Nonlinear Solver.
+    Args:
+        num_iters: Number of iterations each solving.
+        solve_ax: Whether to solve min_x || b - f(ax) || or min_x || b - f(xa) ||
+    """
+    a_svd = _low_rank(a, rcond=rcond)
     u = a_svd.u
     s = a_svd.s
     v = a_svd.v
@@ -76,19 +81,20 @@ def _nonlin_solve(a, b, x, num_iters, solve_ax=True):
         return _solve_xa(x)
 
 
-def nonlin_semi_nmf(a, u, v, rcond=1e-14, eps=1e-15, num_iters=1):
+def nonlin_semi_nmf(a, u, v, rcond=1e-14, eps=1e-15, num_iters=1, num_calc_u=1, num_calc_v=1):
     """Nonlinear semi-NMF
     
     Args:
-        a: original non-negative matrix factorized
-        u: left matrix
-        v: non-negative matrix
+        a: Original non-negative matrix factorized
+        u: Left matrix
+        v: Non-negative matrix
+        rcond: Reciprocal condition number
         num_iters: number of iterations
 
     Returns:
-        u, v
+        Solved u, v
     """
     for _ in range(num_iters):
-        u = _nonlin_solve(v, a, u, 1, solve_ax=False)
-        v = _nonlin_solve(u, a, v, 1, solve_ax=True)
+        u = _nonlin_solve(v, a, u, rcond=rcond, num_iters=num_calc_u, solve_ax=False)
+        v = _nonlin_solve(u, a, v, rcond=rcond, num_iters=num_calc_v, solve_ax=True)
     return u, v

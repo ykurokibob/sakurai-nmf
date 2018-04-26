@@ -101,3 +101,21 @@ def test_large_nonlin_semi_nmf():
           'old loss {0}\n\t'
           'new loss {1}\n\t'
           'process duration {2}'.format(old_loss, new_loss, duration))
+
+
+def test_u_neg_nonlin_semi_nmf():
+    auv = sio.loadmat('u_neg.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    
+    old_loss = np_frobenius_norm(a, u @ v)
+    start_time = time.time()
+    u, v = nonlin_semi_nmf(a, u, v, num_iters=3)
+    end_time = time.time()
+    duration = end_time - start_time
+    new_loss = np_frobenius_norm(a, relu(u @ v))
+    
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('solve u-neg nonlinear semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))

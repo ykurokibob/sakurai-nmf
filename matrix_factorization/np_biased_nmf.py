@@ -6,10 +6,10 @@ from matrix_factorization.utility import _low_rank, relu
 def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1):
     """Biased Semi-NMF
     Args:
-        a: original matrix factorized
-        u: left matrix
-        v: non-negative matrix
-        rcond:
+        a: Original matrix factorized
+        u: Left matrix
+        v: Non-negative matrix
+        rcond: Reciprocal condition number
         eps:
 
     Returns:
@@ -51,7 +51,11 @@ def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1
 
 
 def _nonlin_solve(a, b, x, _lambda=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, solve_ax=True):
-    
+    """Nonlinear Solver.
+    Args:
+        num_iters: Number of iterations each solving.
+        solve_ax: Whether to solve min_x || b - f(ax) || or min_x || b - f(xa) ||
+    """
     _omega = 1.0
     
     def _solve_ax(x):
@@ -114,23 +118,22 @@ def _nonlin_solve(a, b, x, _lambda=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, so
         return _solve_xa(x)
 
 
-def nonlin_semi_nmf(a, u, v, alpha=1e2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1):
+def nonlin_semi_nmf(a, u, v, alpha=1e2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, num_calc_u=1, num_calc_v=1):
     """Biased Nonlinear Semi-NMF
     Args:
-        a: original non-negative matrix factorized
-        u: biased-matrix
-        v: non-negative matrix
-        alpha:
-        beta:
-        rcond:
+        a: Original non-negative matrix factorized
+        u: Biased-matrix
+        v: Non-negative matrix
+        alpha: Coefficient for solve u.
+        beta: Coefficient for solve v.
+        rcond: Reciprocal condition number
         eps:
-        num_iters: number of iterations
+        num_iters: Number of iterations
 
     Returns:
 
     """
     for _ in range(num_iters):
-        u = _nonlin_solve(v, a, u, solve_ax=False)
-        v = _nonlin_solve(u, a, v, solve_ax=True)
-    return u, v
-    
+        u = _nonlin_solve(v, a, u, _lambda=alpha, rcond=rcond, eps=eps, solve_ax=False, num_iters=num_calc_u)
+        v = _nonlin_solve(u, a, v, _lambda=beta, rcond=rcond, eps=eps, solve_ax=True, num_iters=num_calc_v)
+        return u, v

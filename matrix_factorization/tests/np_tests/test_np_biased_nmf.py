@@ -37,8 +37,7 @@ def test_solve_ax():
     auv = sio.loadmat('large.mat')
     a, u, v = auv['a'], auv['u'], auv['v']
     old_loss = np_frobenius_norm(a, u @ v)
-
-
+    
     u = np.hstack((u, np.ones((u.shape[0], 1))))
     start_time = time.time()
     
@@ -60,13 +59,13 @@ def test_solve_xa():
     auv = sio.loadmat('large.mat')
     a, u, v = auv['a'], auv['u'], auv['v']
     old_loss = np_frobenius_norm(a, u @ v)
-
+    
     start_time = time.time()
     u = np.hstack((u, np.ones((u.shape[0], 1))))
     u = _nonlin_solve(a=v, b=a, x=u, num_iters=1, solve_ax=False)
     end_time = time.time()
     duration = end_time - start_time
-
+    
     bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
     new_loss = np_frobenius_norm(a, u @ bias_v)
     assert new_loss < old_loss, "new loss should be less than old loss."
@@ -79,22 +78,46 @@ def test_solve_xa():
 def test_large_nonlin_semi_nmf():
     auv = sio.loadmat('large.mat')
     a, u, v = auv['a'], auv['u'], auv['v']
-
+    
     old_loss = np_frobenius_norm(a, u @ v)
-
+    
     u = np.hstack((u, np.ones((u.shape[0], 1))))
     start_time = time.time()
-
+    
     u, v = nonlin_semi_nmf(a, u, v)
-
+    
     end_time = time.time()
     duration = end_time - start_time
-
+    
     bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
     new_loss = np_frobenius_norm(a, u @ bias_v)
-
+    
     assert new_loss < old_loss, "new loss should be less than old loss."
     print('solve biased Nonlinear semi-NMF\n\t'
+          'old loss {0}\n\t'
+          'new loss {1}\n\t'
+          'process duration {2}'.format(old_loss, new_loss, duration))
+
+
+def test_u_nega_nonlin_semi_nmf():
+    auv = sio.loadmat('u_neg.mat')
+    a, u, v = auv['a'], auv['u'], auv['v']
+    
+    old_loss = np_frobenius_norm(a, relu(u @ v))
+    
+    u = np.hstack((u, np.ones((u.shape[0], 1))))
+    start_time = time.time()
+    
+    u, v = nonlin_semi_nmf(a, u, v, num_calc_u=1, num_calc_v=1)
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    
+    bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
+    new_loss = np_frobenius_norm(a, relu(u @ bias_v))
+    
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print('solve u-nega biased Nonlinear semi-NMF\n\t'
           'old loss {0}\n\t'
           'new loss {1}\n\t'
           'process duration {2}'.format(old_loss, new_loss, duration))
