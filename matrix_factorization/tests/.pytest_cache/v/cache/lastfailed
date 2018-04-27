@@ -8,5 +8,8 @@
   "np_tests/test_np_nmf.py::test_semi_nmf": true,
   "np_tests/test_np_nmf.py::test_solve_ax": true,
   "np_tests/test_np_nmf.py::test_solve_xa": true,
-  "test_matrix_factorization.py::test_semi_nmf": true
+  "test_matrix_factorization.py::test_semi_nmf": true,
+  "test_python_matrix_factorization.py::test_np_biased_semi_nmf": true,
+  "test_python_matrix_factorization.py::test_tf_biased_semi_nmf": true,
+  "test_python_matrix_factorization.py::test_tf_vanilla_semi_nmf": true
 }
