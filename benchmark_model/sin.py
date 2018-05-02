@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-from simple_model.dataset import load_data
+from benchmark_model.dataset import load_data
 
 
 def tround(x, digits=3):
