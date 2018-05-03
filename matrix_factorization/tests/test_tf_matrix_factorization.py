@@ -104,17 +104,17 @@ def test_np_biased_nonlin_semi_nmf():
     auv = sio.loadmat(mat_file)
     a, u, v = auv['a'], auv['u'], auv['v']
     old_loss = np_frobenius_norm(a, u @ v)
-
+    
     bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
     start_time = time.time()
-
+    
     u, bias_v = nonlin_semi_nmf(a, u, bias_v, use_bias=True)
-
+    
     end_time = time.time()
     duration = end_time - start_time
-
+    
     bias_u = np.hstack((u, np.ones((u.shape[0], 1))))
-
+    
     new_loss = np_frobenius_norm(a, relu(bias_u @ bias_v))
     assert a.shape == (bias_u @ bias_v).shape
     assert new_loss < old_loss, "new loss should be less than old loss."
@@ -126,16 +126,16 @@ def test_np_not_calc_v_biased_nonlin_semi_nmf():
     a, u, v = auv['a'], auv['u'], auv['v']
     old_loss = np_frobenius_norm(a, u @ v)
     bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
-
+    
     start_time = time.time()
-
+    
     u, bias_v = nonlin_semi_nmf(a, u, bias_v, use_bias=True, num_calc_v=0)
-
+    
     end_time = time.time()
     duration = end_time - start_time
-
+    
     bias_u = np.hstack((u, np.ones((u.shape[0], 1))))
-
+    
     new_loss = np_frobenius_norm(a, relu(bias_u @ bias_v))
     assert a.shape == (bias_u @ bias_v).shape
     assert new_loss < old_loss, "new loss should be less than old loss."
@@ -315,4 +315,35 @@ def test_tf_not_calc_v_biased_nonlin_semi_nmf():
     new_loss = np_frobenius_norm(a, relu(_bias_u @ _bias_v))
     assert a.shape == (_bias_u @ _bias_v).shape
     assert new_loss < old_loss, "new loss should be less than old loss."
-    print_format('TensorFlow', 'biased Nonlinear semi-NMF(NOT CALC v)', a, _bias_u, _bias_v, old_loss, new_loss, duration)
+    print_format('TensorFlow', 'biased Nonlinear semi-NMF(NOT CALC v)', a, _bias_u, _bias_v, old_loss, new_loss,
+                 duration)
+
+
+def test_original_biased_nonlin_semi_nmf():
+    auv = sio.loadmat(mat_file)
+    u, v = auv['u'], auv['v']
+    a = relu(u @ v)
+    bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
+    old_loss = np_frobenius_norm(a, u @ v)
+    
+    a_ph = tf.placeholder(tf.float64, shape=a.shape)
+    u_ph = tf.placeholder(tf.float64, shape=u.shape)
+    bias_v_ph = tf.placeholder(tf.float64, shape=bias_v.shape)
+    
+    tf_bias_u, tf_v = nonlin_semi_nmf(a_ph, u_ph, bias_v_ph, use_bias=True, use_tf=True, num_calc_v=0)
+    
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        init.run()
+        
+        start_time = time.time()
+        _u, _bias_v = sess.run([tf_bias_u, tf_v], feed_dict={a_ph: a, u_ph: u, bias_v_ph: bias_v})
+        end_time = time.time()
+    
+    duration = end_time - start_time
+    _bias_u = np.hstack((_u, np.ones((_u.shape[0], 1))))
+    new_loss = np_frobenius_norm(a, relu(_bias_u @ _bias_v))
+    assert a.shape == (_bias_u @ _bias_v).shape
+    assert new_loss < old_loss, "new loss should be less than old loss."
+    print_format('TensorFlow', 'biased Nonlinear semi-NMF(NOT CALC v)', a, _bias_u, _bias_v, old_loss, new_loss,
+                 duration)

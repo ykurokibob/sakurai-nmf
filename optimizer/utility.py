@@ -3,7 +3,7 @@
 import collections
 import tensorflow as tf
 
-Layer = collections.namedtuple('Layer', 'kernel, bias, use_bias')
+Layer = collections.namedtuple('Layer', 'kernel, bias, output, use_bias')
 Layer.__new__.__defaults__ = len(Layer._fields) * (None,)
 
 
@@ -19,7 +19,21 @@ def get_name(x):
     return x.name.split('/')[0]
 
 
-def zip_layer(ops: list):
+# def get_hidden_output(inputs: tf.Tensor, layers: list):
+#     hiddens = []
+#     outputs = inputs
+#     for i, layer in enumerate(layers):
+#         # Calculate hidden outputs
+#         hidden = tf.matmul(outputs, layer.kernel)
+#         if layer.use_bias:
+#             hidden = tf.add(hidden, layer.bias)
+#         hidden = tf.identity(hidden, name='hidden_output_{}'.format(i))
+#         hiddens.append(hidden)
+#         outputs = hidden
+#     return hiddens
+
+
+def zip_layer(inputs: tf.Tensor, ops: list):
     """
     Args:
         ops: List of layers collected by tf.get_collection
@@ -31,6 +45,7 @@ def zip_layer(ops: list):
     # use temp operation for the last layer doesn't use bias.
     ops.append(None)
     
+    outputs = inputs
     while ops:
         train_op = ops.pop(0)
         if train_op is None:
@@ -45,11 +60,23 @@ def zip_layer(ops: list):
             bias_shape = maybe_bias_op.get_shape()
             assert kernel_shape[1] == bias_shape[0], "There is some bugs," \
                                                      "kernel doesn't correspond to bias."
-            layers.append(Layer(kernel=train_op,
-                                bias=maybe_bias_op,
-                                use_bias=True))
+            use_bias = True
             # bias ops no need.
             ops.pop(0)
         else:
-            layers.append(Layer(kernel=train_op,
-                                use_bias=False))
+            maybe_bias_op = None
+            use_bias = False
+        
+        # Calculate hidden outputs
+        hidden = tf.matmul(outputs, train_op)
+        if use_bias:
+            hidden = tf.add(hidden, maybe_bias_op)
+        hidden = tf.identity(hidden, name='hidden')
+        
+        layers.append(Layer(kernel=train_op,
+                            bias=maybe_bias_op,
+                            output=hidden,
+                            use_bias=use_bias,
+                            ))
+        outputs = hidden
+    return layers

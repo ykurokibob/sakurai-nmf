@@ -9,6 +9,7 @@ import contextlib
 import numpy as np
 
 
+
 class AttrDict(dict):
     """Wrap a dictionary to access keys as attributes."""
     
@@ -56,4 +57,16 @@ def _low_rank(a, rcond=1e-14):
     u = u[:, :k]
     s = np.diag(s)[:k, :k]
     v = v[:, :k]
+    assert not np.isnan(u).any(), have_nan('u', u)
+    assert not np.isnan(s).any(), have_nan('s', s)
+    assert not np.isnan(v).any(), have_nan('v', v)
     return AttrDict(u=u, s=s, v=v)
+
+
+def have_nan(name, matrix: np.ndarray):
+    vec = matrix.flatten()
+    num_nans = np.isnan(vec).sum()
+    message = '{} has Nan the number of {}'.format(name, num_nans)
+    return message
+    
+    

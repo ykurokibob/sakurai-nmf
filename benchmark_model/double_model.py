@@ -4,28 +4,34 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from pprint import pprint
-
+import agents
 import numpy as np
 import tensorflow as tf
 
 batch_size = 100
+label_size = 3
 
 
 def build_model():
-    g = tf.Graph()
-    inputs = tf.placeholder(tf.float64, (None, 784), name='inputs')
-    labels = tf.placeholder(tf.float64, (None, 1), name='labels')
-    x = tf.layers.dense(inputs, 100)
-    x = tf.layers.dense(x, 1)
-    losses = tf.losses.mean_squared_error(labels=labels, predictions=x)
+    inputs = tf.placeholder(tf.float64, (batch_size, 784), name='inputs')
+    labels = tf.placeholder(tf.float64, (batch_size, label_size), name='labels')
+    x = tf.layers.dense(inputs, 100, activation=tf.nn.relu)
+    x = tf.layers.dense(x, 50, use_bias=False, activation=tf.nn.relu)
+    # x = tf.layers.dense(inputs, 100, activation=None)
+    # x = tf.layers.dense(x, 50, use_bias=False, activation=None)
+    outputs = tf.layers.dense(x, label_size, activation=None)
+    losses = tf.losses.mean_squared_error(labels=labels, predictions=outputs)
     loss = tf.reduce_mean(losses)
-    return inputs, labels, loss
+    return agents.tools.AttrDict(inputs=inputs,
+                                 outputs=outputs,
+                                 labels=labels,
+                                 loss=loss,
+                                 )
 
 
 def build_data():
     x = np.random.uniform(0., 1., size=(batch_size, 784)).astype(np.float64)
-    y = np.random.uniform(0., 1., size=(batch_size, 1)).astype(np.float64)
+    y = np.random.uniform(-1., 1., size=(batch_size, label_size)).astype(np.float64)
     return x, y
 
 
@@ -43,9 +49,8 @@ def main(_):
         init.run()
         loss = sess.run(loss, feed_dict={inputs: x, labels: y})
         print('loss {}'.format(loss))
-        pprint(get_train_ops(graph))
+        ops = get_train_ops(graph)
 
 
 if __name__ == '__main__':
-    # tf.enable_eager_execution()
     tf.app.run()

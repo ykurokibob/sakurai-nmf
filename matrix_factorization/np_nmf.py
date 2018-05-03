@@ -4,10 +4,9 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-
 import numpy as np
 
-from matrix_factorization.utility import _low_rank, relu
+from matrix_factorization import utility
 
 
 def semi_nmf(a, u, v, rcond=1e-14, eps=1e-15, num_iters=1):
@@ -23,7 +22,8 @@ def semi_nmf(a, u, v, rcond=1e-14, eps=1e-15, num_iters=1):
         u, v
     """
     for _ in range(num_iters):
-        svd = _low_rank(v, rcond=rcond)
+        assert not np.isnan(v).any(), utility.have_nan('v', v)
+        svd = utility._low_rank(v, rcond=rcond)
         u_t = np.transpose(svd.u)
         _v = svd.v
         s_inv = np.linalg.inv(svd.s)
@@ -39,10 +39,12 @@ def semi_nmf(a, u, v, rcond=1e-14, eps=1e-15, num_iters=1):
         
         uvm = u_tu_m @ v
         uvp = u_tu_p @ v
-        sqrt = np.sqrt(
-            np.divide(u_ta_p + uvm,
-                      u_ta_m + uvp + eps)
-        )
+        divide = np.divide(u_ta_p + uvm,
+                           u_ta_m + uvp + eps)
+        # TODO: The divide induce Nan.
+        # assert not divide[divide < 0.].sum(), '-1'
+        divide[divide < 0.] = 0.
+        sqrt = np.sqrt(divide)
         v = np.multiply(v, sqrt)
     
     return u, v
@@ -54,7 +56,8 @@ def _nonlin_solve(a, b, x, rcond=1e-14, num_iters=1, solve_ax=True):
         num_iters: Number of iterations each solving.
         solve_ax: Whether to solve min_x || b - f(ax) || or min_x || b - f(xa) ||
     """
-    a_svd = _low_rank(a, rcond=rcond)
+    assert not np.isnan(a).any(), utility.have_nan('a', a)
+    a_svd = utility._low_rank(a, rcond=rcond)
     u = a_svd.u
     s = a_svd.s
     v = a_svd.v
@@ -66,7 +69,7 @@ def _nonlin_solve(a, b, x, rcond=1e-14, num_iters=1, solve_ax=True):
          min_x || b - f(ax) ||
         """
         for _ in range(num_iters):
-            r = b - relu(a @ x)
+            r = b - utility.relu(a @ x)
             ur = u.T @ r
             solve = np.linalg.solve(s, ur)
             x = x + _omega * (v @ solve)
@@ -77,7 +80,7 @@ def _nonlin_solve(a, b, x, rcond=1e-14, num_iters=1, solve_ax=True):
          min_x || b - f(xa) ||
         """
         for _ in range(num_iters):
-            r = b - relu(x @ a)
+            r = b - utility.relu(x @ a)
             s_inv = np.linalg.inv(s)
             rvs = r @ v @ s_inv
             x = x + _omega * (rvs @ u.T)
