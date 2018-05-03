@@ -19,30 +19,17 @@ def get_name(x):
     return x.name.split('/')[0]
 
 
-# def get_hidden_output(inputs: tf.Tensor, layers: list):
-#     hiddens = []
-#     outputs = inputs
-#     for i, layer in enumerate(layers):
-#         # Calculate hidden outputs
-#         hidden = tf.matmul(outputs, layer.kernel)
-#         if layer.use_bias:
-#             hidden = tf.add(hidden, layer.bias)
-#         hidden = tf.identity(hidden, name='hidden_output_{}'.format(i))
-#         hiddens.append(hidden)
-#         outputs = hidden
-#     return hiddens
-
-
 def zip_layer(inputs: tf.Tensor, ops: list):
     """
     Args:
+        inputs: Inputs of network
         ops: List of layers collected by tf.get_collection
 
     Returns:
         List of layers zipped by weight(kernel) and bias.
     """
     layers = []
-    # use temp operation for the last layer doesn't use bias.
+    # Use temp operation for the last layer doesn't use bias.
     ops.append(None)
     
     outputs = inputs
@@ -66,6 +53,12 @@ def zip_layer(inputs: tf.Tensor, ops: list):
         else:
             maybe_bias_op = None
             use_bias = False
+
+        layers.append(Layer(kernel=train_op,
+                            bias=maybe_bias_op,
+                            output=outputs,
+                            use_bias=use_bias,
+                            ))
         
         # Calculate hidden outputs
         hidden = tf.matmul(outputs, train_op)
@@ -73,10 +66,4 @@ def zip_layer(inputs: tf.Tensor, ops: list):
             hidden = tf.add(hidden, maybe_bias_op)
         hidden = tf.identity(hidden, name='hidden')
         
-        layers.append(Layer(kernel=train_op,
-                            bias=maybe_bias_op,
-                            output=hidden,
-                            use_bias=use_bias,
-                            ))
         outputs = hidden
-    return layers
