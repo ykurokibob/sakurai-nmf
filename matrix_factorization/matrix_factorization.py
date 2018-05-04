@@ -68,6 +68,9 @@ def semi_nmf(a, u, v,
         return _semi_nmf(a=a, u=u, v=v)
     
     if use_tf:
+        # For using tf.py_func the shape of matrix will be <unknown>
+        u_shape = u.shape
+        v_shape = v.shape
         if data_format is BATCH_FIRST:
             a_t = tf.transpose(a)
             tf_u_t, tf_v_t = tf.py_func(_semi_nmf,
@@ -77,10 +80,14 @@ def semi_nmf(a, u, v,
             tf_u_t = tf.check_numerics(tf_u_t, 'v')
             tf_u = tf.transpose(tf_v_t)
             tf_v = tf.transpose(tf_u_t)
+            tf_u.set_shape(u_shape)
+            tf_v.set_shape(v_shape)
             return tf_u, tf_v
         tf_u, tf_v = tf.py_func(_semi_nmf, [a, u, v], [tf.float64, tf.float64])
         tf_u = tf.check_numerics(tf_u, 'u')
         tf_v = tf.check_numerics(tf_v, 'v')
+        tf_u.set_shape(u_shape)
+        tf_v.set_shape(v_shape)
         return tf_u, tf_v
         
     
@@ -151,6 +158,9 @@ def nonlin_semi_nmf(a, u, v,
         return _nonlin_semi_nmf(a=a, u=u, v=v)
     
     if use_tf:
+        # For using tf.py_func the shape of matrix will be <unknown>
+        u_shape = u.shape
+        v_shape = v.shape
         if data_format is BATCH_FIRST:
             a_t = tf.transpose(a)
             u_t = tf.transpose(u)
@@ -160,11 +170,15 @@ def nonlin_semi_nmf(a, u, v,
             tf_u_t = tf.check_numerics(tf_u_t, 'v')
             tf_u = tf.transpose(tf_v_t)
             tf_v = tf.transpose(tf_u_t)
+            tf_u.set_shape(u_shape)
+            tf_v.set_shape(v_shape)
             return tf_u, tf_v
         # For MATLAB format.
         tf_u, tf_v = tf.py_func(_nonlin_semi_nmf, [a, u, v], [tf.float64, tf.float64])
         tf_u = tf.check_numerics(tf_u, 'u')
         tf_v = tf.check_numerics(tf_v, 'v')
+        tf_u.set_shape(u_shape)
+        tf_v.set_shape(v_shape)
         return tf_u, tf_v
     
     raise NotImplementedError('Never implement other type matrix')

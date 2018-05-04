@@ -142,4 +142,4 @@ def nonlin_semi_nmf(a, u, v, alpha=1e2, beta=1e-2, rcond=1e-14, eps=1e-15, num_i
     for _ in range(num_iters):
         u = _nonlin_solve(v, a, u, _lambda=alpha, rcond=rcond, eps=eps, solve_ax=False, num_iters=num_calc_u)
         v = _nonlin_solve(u, a, v, _lambda=beta, rcond=rcond, eps=eps, solve_ax=True, num_iters=num_calc_v)
-        return u, v
+    return u, v
