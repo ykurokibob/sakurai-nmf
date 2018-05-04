@@ -50,6 +50,8 @@ def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1
         
         divide = np.divide(uap + uum @ bias_v + beta * v,
                            uam + uup @ bias_v + beta * v + eps)
+        # TODO: The divide induce Nan.
+        divide[divide < 0.] = 0.
         sqrt = np.sqrt(divide)
         v = np.multiply(v, sqrt)
         bias_v = np.vstack((v, bias.T))

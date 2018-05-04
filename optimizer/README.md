@@ -8,16 +8,12 @@
 
 ## Results of MNIST
 
-Now it cannot run well. Please see [test_optimizers.py](https://github.com/ashigirl96/nmf-nn/blob/master/optimizer/tests/test_optimizers.py)
+Now it cannot run well. Please see [test_optimizers.py](https://github.com/ashigirl96/nmf-nn/blob/master/optimizer/tests/test_optimizers.py) or [mnist.py](https://github.com/ashigirl96/nmf-nn/blob/master/optimizer/tests/mnist.py).
 
 ```python
-old loss 12.141581331044128, new loss 2.600699084339371
-old loss 7.440369278147534, new loss 1.5829687029302717
-[snip]
-old loss 1.3696975323096328, new loss 1.1552906585667022
-old loss 1.36660564966736, new loss 1.1209370219569919
-old loss 1.3786845489484463, new loss 1.147934471870073  
+NMF-optimizer
+(2/2) [Train]loss 2.0788131090698574, accuracy 40.733333587646484 [Test]loss 2.099674575219118, accuracy 49.67333297729492
+==========
+Adam-optimizer
+(5/5) [Train]loss 0.5735493328609222, accuracy 81.4000015258789 [Test]loss 0.5333448813711203, accuracy 83.63999938964844
 ```
-
-![](./assets/result_opt.png)
-

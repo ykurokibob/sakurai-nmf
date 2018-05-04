@@ -48,6 +48,8 @@ def relu(x):
 
 
 def _low_rank(a, rcond=1e-14):
+    # TODO
+    assert not np.isnan(a).any(), have_nan('a', a)
     u, s, vt = np.linalg.svd(a, full_matrices=True)
     v = np.transpose(vt)
     _s = np.diag(s)
