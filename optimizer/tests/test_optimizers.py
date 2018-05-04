@@ -9,7 +9,7 @@ import tensorflow as tf
 import benchmark_model
 from optimizer import optimizers
 
-batch_size = 500
+batch_size = 100
 label_size = 1
 
 
@@ -65,5 +65,5 @@ class NMFOptimizerTest(tf.test.TestCase):
                 print('\nold loss {}, new loss {}'.format(old_loss, new_loss), end='', flush=True)
         
         import matplotlib.pyplot as plt
-        plt.plot(losses)
+        plt.loglog(losses)
         plt.show()

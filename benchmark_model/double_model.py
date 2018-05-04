@@ -10,14 +10,14 @@ import tensorflow as tf
 from keras.datasets.mnist import load_data
 from losses import frobenius_norm
 
-batch_size = 500
+batch_size = 100
 label_size = 1
 
 
 def build_tf_model():
     inputs = tf.placeholder(tf.float64, (batch_size, 784), name='inputs')
     labels = tf.placeholder(tf.float64, (batch_size, label_size), name='labels')
-    x = tf.layers.dense(inputs, 100, activation=tf.nn.relu, use_bias=False)
+    x = tf.layers.dense(inputs, 100, activation=tf.nn.relu, use_bias=True)
     x = tf.layers.dense(x, 50, use_bias=False, activation=tf.nn.relu)
     outputs = tf.layers.dense(x, label_size, activation=None, use_bias=False)
     # losses = tf.losses.mean_squared_error(labels=labels, predictions=outputs)
