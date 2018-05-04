@@ -1,6 +1,7 @@
 """Main of mnist model."""
 
 import agents
+import functools
 import numpy as np
 import tensorflow as tf
 
@@ -18,6 +19,30 @@ def default_config():
     # Learning rate for adam
     learning_rate = 0.01
     return locals()
+
+
+def train_and_test(train_op, num_epochs, sess, model, x_train, y_train, x_test, y_test, batch_size=1):
+    for i in range(num_epochs):
+        # Train...
+        x, y = benchmark_model.batch(x_train, y_train, batch_size=batch_size)
+        _, train_loss, train_acc = sess.run([train_op, model.other_loss, model.accuracy], feed_dict={
+            model.inputs: x,
+            model.labels: y,
+        })
+        stats = []
+        # Compute test accuracy.
+        for _ in range(5):
+            x, y = benchmark_model.batch(x_test, y_test, batch_size=batch_size)
+            stats.append(sess.run([model.other_loss, model.accuracy], feed_dict={
+                model.inputs: x,
+                model.labels: y,
+            }))
+        test_loss, test_acc = np.mean(stats, axis=0)
+        
+        print('\r({}/{}) [Train]loss {}, accuracy {} [Test]loss {}, accuracy {}'.format(
+            i + 1, num_epochs,
+            train_loss, train_acc, test_loss, test_acc), end='', flush=True)
+    print()
 
 
 def main(_):
@@ -43,52 +68,18 @@ def main(_):
     init = tf.global_variables_initializer()
     with tf.Session() as sess:
         sess.run(init)
+        _train_and_test = functools.partial(train_and_test,
+                                            sess=sess, model=model,
+                                            x_train=x_train, y_train=y_train,
+                                            x_test=x_test, y_test=y_test,
+                                            batch_size=config.batch_size)
         print('NMF-optimizer')
         # Train with NMF optimizer.
-        for i in range(config.num_mf_epochs):
-            # Train...
-            x, y = benchmark_model.batch(x_train, y_train, batch_size=config.batch_size)
-            _, train_loss, train_acc = sess.run([train_op, model.other_loss, model.accuracy], feed_dict={
-                model.inputs: x,
-                model.labels: y,
-            })
-            stats = []
-            # Compute test accuracy.
-            for _ in range(5):
-                x, y = benchmark_model.batch(x_test, y_test, batch_size=config.batch_size)
-                stats.append(sess.run([model.other_loss, model.accuracy], feed_dict={
-                    model.inputs: x,
-                    model.labels: y,
-                }))
-            test_loss, test_acc = np.mean(stats, axis=0)
-            
-            print('\r({}/{}) [Train]loss {}, accuracy {} [Test]loss {}, accuracy {}'.format(
-                i + 1, config.num_mf_epochs,
-                train_loss, train_acc, test_loss, test_acc), end='', flush=True)
+        _train_and_test(train_op, num_epochs=config.num_mf_epochs)
         
-        print("\n" + "=" * 10)
         print('Adam-optimizer')
-        
         # Train with Adam optimizer.
-        for i in range(config.num_bp_epochs):
-            x, y = benchmark_model.batch(x_train, y_train, batch_size=config.batch_size)
-            _, train_loss, train_acc = sess.run([bp_train_op, model.other_loss, model.accuracy], feed_dict={
-                model.inputs: x,
-                model.labels: y,
-            })
-            stats = []
-            # Compute test accuracy.
-            for _ in range(5):
-                x, y = benchmark_model.batch(x_test, y_test, batch_size=config.batch_size)
-                stats.append(sess.run([model.other_loss, model.accuracy], feed_dict={
-                    model.inputs: x,
-                    model.labels: y,
-                }))
-            test_loss, test_acc = np.mean(stats, axis=0)
-            
-            print('\r({}/{}) [Train]loss {}, accuracy {} [Test]loss {}, accuracy {}'.format(
-                i + 1, config.num_bp_epochs,
-                train_loss, train_acc, test_loss, test_acc), end='', flush=True)
+        _train_and_test(bp_train_op, num_epochs=config.num_bp_epochs)
 
 
 if __name__ == '__main__':
