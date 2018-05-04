@@ -3,34 +3,16 @@
 The NMF optimizer doesn't work well. But, the NMF would get well.
 
 
+## Results of MNIST
+
+Now it cannot run well. Please see [test_optimizers.py](https://github.com/ashigirl96/nmf-nn/blob/master/optimizer/tests/test_optimizers.py) or [mnist.py](https://github.com/ashigirl96/nmf-nn/blob/master/examples/mnist.py).
+
+But now we can get accuracy 83% for only 7 iterations.
+
 ```python
-tf.reset_default_graph()
-target = tf.placeholder(tf.float32, [1000, 500])
-mf = NonlinearSemiNMF(target, (1000, 784), (784, 500), use_bias=True)
-u_op, v_op, bias_op, loss_op = mf.factorize()
-
-a = np.random.uniform(0, 1, size=[1000, 500])
-
-init = tf.global_variables_initializer()
-with tf.Session() as sess:
-  init.run()
-  for i in range(10):
-    _, loss = sess.run([u_op, loss_op], feed_dict={mf.target_y: a})
-    print("loss", loss)
-  _, loss = sess.run([v_op, loss_op], feed_dict={mf.target_y: a})
-  print("loss", loss)
-```
-
-```
-loss 127.94389
-loss 0.7218605
-loss 0.5472945
-loss 0.489057
-loss 0.45049044
-loss 0.41869712
-loss 0.39025217
-loss 0.36473152
-loss 0.3411206
-loss 0.3186099
-loss 0.29780647
+NMF-optimizer
+(2/2) [Test]loss 2.099674575219118, accuracy 49.67333297729492
+==========
+Adam-optimizer
+(5/5) [Test]loss 0.5333448813711203, accuracy 83.63999938964844
 ```
