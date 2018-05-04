@@ -8,6 +8,7 @@ import agents
 import numpy as np
 import tensorflow as tf
 from keras.datasets.mnist import load_data
+from keras.utils.np_utils import to_categorical
 
 from losses import frobenius_norm
 
@@ -81,6 +82,15 @@ def build_data():
     x = np.random.uniform(0., 1., size=(batch_size, 784)).astype(np.float64)
     y = np.random.uniform(-1., 1., size=(batch_size, label_size)).astype(np.float64)
     return x, y
+
+
+def load_one_hot_data():
+    (x_train, y_train), (x_test, y_test) = load_data('/tmp/mnist')
+    x_train = x_train.reshape((-1, 784)).astype(np.float64) / 255.
+    y_train = to_categorical(y_train, 10).astype(np.float64)
+    x_test = x_test.reshape((-1, 784)).astype(np.float64) / 255.
+    y_test = to_categorical(y_test, 10).astype(np.float64)
+    return (x_train, y_train), (x_test, y_test)
 
 
 def batch(x, y, batch_size):

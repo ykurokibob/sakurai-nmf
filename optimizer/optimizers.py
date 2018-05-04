@@ -32,8 +32,14 @@ class NMFOptimizer(object):
         self._layers = utility.zip_layer(self._model.inputs, ops=self._ops)
     
     def minimize(self):
+        """Construct the control dependencies for calculating neural net optimized.
+        
+        Returns:
+            tf.no_op.
+            The import
+        """
         a = self._model.labels
-        update = []
+        updates = []
         # Reverse and remove first element.
         layers = self._layers[::-1]
         for i, layer in enumerate(layers):
@@ -56,8 +62,7 @@ class NMFOptimizer(object):
                                           )
             if layer.use_bias:
                 v, bias = utility.factorize_v_bias(v)
-                update.append(layer.bias.assign(bias))
-            update.append(layer.kernel.assign(v))
+                updates.append(layer.bias.assign(bias))
+            updates.append(layer.kernel.assign(v))
             a = tf.identity(u)
-        with tf.control_dependencies(update):
-            return tf.no_op()
+        return tf.group(*updates)
