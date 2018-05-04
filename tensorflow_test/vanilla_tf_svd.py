@@ -16,8 +16,8 @@ def main(_):
     inputs = tf.placeholder(tf.float32, shape=_size, name='inputs')
     _inputs = np.random.uniform(0., 1., size=_size)
     
-    with tf.device('/cpu:0'):
-        suv = tf.svd(inputs, compute_uv=True)
+    # with tf.device('/cpu:0'):
+    suv = tf.svd(inputs, compute_uv=True)
     
     init = tf.global_variables_initializer()
     config = tf.ConfigProto(log_device_placement=True, allow_soft_placement=True)
