@@ -47,7 +47,7 @@ class NMFOptimizerTest(tf.test.TestCase):
         with self.test_session() as sess:
             sess.run(init)
             pprint(optimizer._layers)
-            for i in range(100):
+            for i in range(5):
                 x, y = mnist.get_batch(batch_size=batch_size)
                 old_loss = sess.run(model.loss, feed_dict={
                     model.inputs: x,
@@ -64,6 +64,6 @@ class NMFOptimizerTest(tf.test.TestCase):
                 losses.append(new_loss)
                 print('\nold loss {}, new loss {}'.format(old_loss, new_loss), end='', flush=True)
         
-        import matplotlib.pyplot as plt
-        plt.loglog(losses)
-        plt.show()
+        # import matplotlib.pyplot as plt
+        # plt.loglog(losses)
+        # plt.show()
