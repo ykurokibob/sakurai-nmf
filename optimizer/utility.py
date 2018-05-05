@@ -36,7 +36,6 @@ def get_placeholder_ops(loss: tf.Operation):
     # the variables.
     _tf_obj = None
     while len(queue) != 0:
-        # print(queue)
         tf_obj = queue.popleft()
         if tf_obj is None:
             continue

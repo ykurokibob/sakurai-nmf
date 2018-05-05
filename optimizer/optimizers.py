@@ -9,6 +9,7 @@ import tensorflow as tf
 import matrix_factorization as mf
 from optimizer import utility
 
+
 class NMFOptimizer(object):
     """Optimize model like backpropagation."""
     
@@ -20,12 +21,11 @@ class NMFOptimizer(object):
         """
         self._config = config
         self._graph = graph
-        
+    
     def _init(self, loss):
         self._ops = utility.get_train_ops(graph=self._graph)
         self.inputs, self.labels = utility.get_placeholder_ops(loss)
-        self._layers = utility.zip_layer(self.inputs, ops=self._ops)
-        
+        self._layers = utility.zip_layer(self.inputs, ops=self._ops, graph=self._graph)
     
     def minimize(self, loss=None):
         """Construct the control dependencies for calculating neural net optimized.
@@ -38,7 +38,7 @@ class NMFOptimizer(object):
         
         a = self.labels
         updates = []
-        # Reverse and remove first element.
+        # Reverse
         layers = self._layers[::-1]
         for i, layer in enumerate(layers):
             u = layer.output

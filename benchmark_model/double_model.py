@@ -7,12 +7,11 @@ from __future__ import print_function
 import agents
 import numpy as np
 import tensorflow as tf
-from keras.datasets.mnist import load_data
 from keras.utils.np_utils import to_categorical
 
 from losses import frobenius_norm
 
-batch_size = 4000
+batch_size = 5000
 label_size = 1
 
 
@@ -47,8 +46,8 @@ def build_tf_one_hot_model(use_bias=False, activation=None):
     
     losses = frobenius_norm(labels, outputs)
     other_losses = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=outputs)
-    loss = tf.reduce_mean(losses)
-    other_loss = tf.reduce_mean(other_losses)
+    frob_norm = tf.reduce_mean(losses)
+    cross_entropy = tf.reduce_mean(other_losses)
     
     correct_prediction = tf.equal(tf.argmax(labels, 1), tf.argmax(outputs, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32)) * 100.
@@ -56,8 +55,8 @@ def build_tf_one_hot_model(use_bias=False, activation=None):
     return agents.tools.AttrDict(inputs=inputs,
                                  outputs=outputs,
                                  labels=labels,
-                                 loss=loss,
-                                 other_loss=other_loss,
+                                 frob_norm=frob_norm,
+                                 cross_entropy=cross_entropy,
                                  accuracy=accuracy,
                                  )
 
@@ -84,8 +83,12 @@ def build_data():
     return x, y
 
 
-def load_one_hot_data():
-    (x_train, y_train), (x_test, y_test) = load_data('/tmp/mnist')
+def load_one_hot_data(dataset='mnist'):
+    from keras.datasets.mnist import load_data
+    if dataset == 'fashion':
+        from keras.datasets.fashion_mnist import load_data
+    (x_train, y_train), (x_test, y_test) = load_data()
+        
     x_train = x_train.reshape((-1, 784)).astype(np.float64) / 255.
     y_train = to_categorical(y_train, 10).astype(np.float64)
     x_test = x_test.reshape((-1, 784)).astype(np.float64) / 255.
@@ -110,6 +113,7 @@ def default_config():
 
 
 def main(_):
+    from keras.datasets.mnist import load_data
     (x_train, y_train), (x_test, y_test) = load_data('/tmp/mnist')
     x_train = x_train.reshape((-1, 784)).astype(np.float64) / 255.
     y_train = y_train[..., None].astype(np.float64)
