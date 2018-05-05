@@ -25,8 +25,8 @@ class NMFOptimizerTest(tf.test.TestCase):
         model = benchmark_model.build_tf_one_hot_model()
         
         config = default_config()
-        optimizer = optimizers.NMFOptimizer(config, model)
-        train_op = optimizer.minimize()
+        optimizer = optimizers.NMFOptimizer(config)
+        train_op = optimizer.minimize(model.loss)
         
         init = tf.global_variables_initializer()
         with self.test_session() as sess:
@@ -45,8 +45,8 @@ class NMFOptimizerTest(tf.test.TestCase):
         assert y_train.shape == (60000, 10)
         
         config = default_config()
-        optimizer = optimizers.NMFOptimizer(config, model)
-        train_op = optimizer.minimize()
+        optimizer = optimizers.NMFOptimizer()
+        train_op = optimizer.minimize(model.loss)
         losses = []
         
         init = tf.global_variables_initializer()

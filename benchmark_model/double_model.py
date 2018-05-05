@@ -12,7 +12,7 @@ from keras.utils.np_utils import to_categorical
 
 from losses import frobenius_norm
 
-batch_size = 3000
+batch_size = 4000
 label_size = 1
 
 
@@ -20,7 +20,7 @@ def build_tf_model():
     inputs = tf.placeholder(tf.float64, (batch_size, 784), name='inputs')
     labels = tf.placeholder(tf.float64, (batch_size, label_size), name='labels')
     x = tf.layers.dense(inputs, 100, activation=tf.nn.relu, use_bias=True)
-    x = tf.layers.dense(x, 50, use_bias=True, activation=tf.nn.relu)
+    x = tf.layers.dense(x, 50, use_bias=False, activation=tf.nn.relu)
     outputs = tf.layers.dense(x, label_size, activation=None, use_bias=True)
     losses = frobenius_norm(labels, outputs)
     loss = tf.reduce_mean(losses)
@@ -36,12 +36,11 @@ def build_tf_model():
                                  )
 
 
-def build_tf_one_hot_model():
+def build_tf_one_hot_model(use_bias=False, activation=None):
     inputs = tf.placeholder(tf.float64, (batch_size, 784), name='inputs')
     labels = tf.placeholder(tf.float64, (batch_size, 10), name='labels')
     
-    use_bias = True
-    activation = None
+    activation = None or activation
     x = tf.layers.dense(inputs, 100, activation=activation, use_bias=use_bias)
     x = tf.layers.dense(x, 50, use_bias=use_bias, activation=activation)
     outputs = tf.layers.dense(x, 10, activation=None, use_bias=use_bias)
@@ -66,16 +65,17 @@ def build_tf_one_hot_model():
 def build_keras_model():
     inputs = tf.keras.Input((784,), batch_size=batch_size, dtype=tf.float64, name='inputs')
     labels = tf.keras.Input((label_size,), batch_size=batch_size, name='labels', dtype=tf.float64)
-    x = tf.keras.layers.Dense(100, activation=tf.nn.relu, dtype=tf.float64)(inputs)
-    x = tf.keras.layers.Dense(50, activation=tf.nn.relu, use_bias=False, dtype=tf.float64)(x)
-    outputs = tf.keras.layers.Dense(label_size, dtype=tf.float64)(x)
+    # x = tf.keras.layers.Dense(100, activation=tf.nn.relu, dtype=tf.float64)(inputs)
+    # x = tf.keras.layers.Dense(50, activation=tf.nn.relu, use_bias=False, dtype=tf.float64)(x)
+    outputs = tf.keras.layers.Dense(label_size, dtype=tf.float64)(inputs)
     losses = tf.keras.losses.mean_squared_error(y_true=labels, y_pred=outputs)
     loss = tf.reduce_mean(losses)
-    return agents.tools.AttrDict(inputs=inputs,
-                                 outputs=outputs,
-                                 labels=labels,
-                                 loss=loss,
-                                 )
+    return inputs, labels, loss
+    # return agents.tools.AttrDict(inputs=inputs,
+    #                              outputs=outputs,
+    #                              labels=labels,
+    #                              loss=loss,
+    #                              )
 
 
 def build_data():

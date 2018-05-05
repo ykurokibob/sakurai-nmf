@@ -71,6 +71,8 @@ def semi_nmf(a, u, v,
         # For using tf.py_func the shape of matrix will be <unknown>
         u_shape = u.shape
         v_shape = v.shape
+        # The algorithm is implemented as MATLAB format.
+        # So that we have to transpose the matricies.
         if data_format is BATCH_FIRST:
             a_t = tf.transpose(a)
             tf_u_t, tf_v_t = tf.py_func(_semi_nmf,
@@ -158,11 +160,12 @@ def nonlin_semi_nmf(a, u, v,
         # For using tf.py_func the shape of matrix will be <unknown>
         u_shape = u.shape
         v_shape = v.shape
+        # The algorithm is implemented as MATLAB format.
+        # So that we have to transpose the matricies.
         if data_format is BATCH_FIRST:
-            a_t = tf.transpose(a)
-            u_t = tf.transpose(u)
-            v_t = tf.transpose(v)
-            tf_u_t, tf_v_t = tf.py_func(_nonlin_semi_nmf, [a_t, v_t, u_t], [tf.float64, tf.float64])
+            tf_u_t, tf_v_t = tf.py_func(_nonlin_semi_nmf,
+                                        [tf.transpose(a), tf.transpose(v), tf.transpose(u)],
+                                        [tf.float64, tf.float64])
             tf_u = tf.check_numerics(tf.transpose(tf_v_t), 'u')
             tf_v = tf.check_numerics(tf.transpose(tf_u_t), 'v')
             tf_u.set_shape(u_shape)

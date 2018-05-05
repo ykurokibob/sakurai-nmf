@@ -7,8 +7,21 @@ import losses
 from matrix_factorization import semi_nmf
 from optimizer import utility
 
-batch_size = 100
-label_size = 1
+mat_file = '../../matrix_factorization/tests/np_tests/small_v_neg.mat'
+
+
+def print_format(lib, algo, a, u, v, old_loss, new_loss, duration):
+    print('\n[{}]Solve {}\n\t'
+          'a {} u {} v {}\n\t'
+          'old loss {}\n\t'
+          'new loss {}\n\t'
+          'process duration {}'.format(
+        lib, algo,
+        a.shape, u.shape, v.shape, old_loss, new_loss, duration))
+
+
+batch_size = benchmark_model.batch_size
+label_size = benchmark_model.label_size
 
 
 class UtilityTest(tf.test.TestCase):
@@ -47,7 +60,7 @@ class UtilityTest(tf.test.TestCase):
         layers = utility.zip_layer(inputs=model.inputs, ops=ops)
         layer = layers[0]
         v = tf.concat((layer.kernel, layer.bias[None, ...]), axis=0)
-        v, bias = utility.factorize_v_bias(v)
+        v, bias = utility.split_v_bias(v)
         
         x, y = benchmark_model.build_data()
         init = tf.global_variables_initializer()
@@ -59,6 +72,37 @@ class UtilityTest(tf.test.TestCase):
             equal = tf.reduce_all(tf.equal(bias, layer.bias))
             equal = sess.run(equal, feed_dict={model.inputs: x})
             self.assertTrue(equal, msg='shape of factorized bias should be bias of shape.')
+    
+    def test_get_placeholder_ops(self):
+        print()
+        model = benchmark_model.build_tf_one_hot_model(False)
+        import time
+        start_time = time.time()
+        inputs, labels = utility.get_placeholder_ops(model.loss)
+        duration = time.time() - start_time
+        print('duration', duration)
+        self.assertEqual(model.inputs, inputs)
+        self.assertEqual(model.labels, labels)
+    
+    def test_other_model_get_placeholder_ops(self):
+        model = benchmark_model.build_tf_model()
+        import time
+        start_time = time.time()
+        inputs, labels = utility.get_placeholder_ops(model.loss)
+        duration = time.time() - start_time
+        print('duration', duration)
+        self.assertEqual(model.inputs, inputs)
+        self.assertEqual(model.labels, labels)
+    
+    def test_keras_get_placeholder_ops(self):
+        _inputs, _labels, loss = benchmark_model.build_keras_model()
+        import time
+        start_time = time.time()
+        inputs, labels = utility.get_placeholder_ops(loss)
+        duration = time.time() - start_time
+        print('duration', duration)
+        self.assertEqual(_inputs, inputs)
+        self.assertEqual(_labels, labels)
 
 
 class FactorizeTest(tf.test.TestCase):

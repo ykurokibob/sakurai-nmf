@@ -301,7 +301,7 @@ class TestTfFormatMatrixFactorization(tf.test.TestCase):
         u_ph = tf.placeholder(tf.float64, shape=u.shape)
         bias_v_ph = tf.placeholder(tf.float64, shape=bias_v.shape)
         
-        tf_bias_u, tf_v = nonlin_semi_nmf(a_ph, u_ph, bias_v_ph, use_bias=True, use_tf=True, num_calc_v=0)
+        tf_bias_u, tf_v = nonlin_semi_nmf(a_ph, u_ph, bias_v_ph, use_bias=True, use_tf=True, num_calc_v=0, num_iters=1)
         
         init = tf.global_variables_initializer()
         with tf.Session() as sess:

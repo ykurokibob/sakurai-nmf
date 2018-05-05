@@ -13,11 +13,15 @@ def default_config():
     # Batch size
     batch_size = benchmark_model.batch_size
     # Number of matrix factorization epochs
-    num_mf_epochs = 3
+    num_mf_epochs = 2
     # Number of back propagation epochs
     num_bp_epochs = 5
     # Learning rate for adam
     learning_rate = 0.01
+    # NMF actiovation
+    activation = None
+    # NMF use bias
+    use_bias = True
     return locals()
 
 
@@ -46,10 +50,10 @@ def train_and_test(train_op, num_epochs, sess, model, x_train, y_train, x_test, 
 
 
 def main(_):
-    # Build one hot mnist model.
-    model = benchmark_model.build_tf_one_hot_model()
     # Set configuration
     config = agents.tools.AttrDict(default_config())
+    # Build one hot mnist model.
+    model = benchmark_model.build_tf_one_hot_model(use_bias=config.use_bias, activation=config.activation)
     # Load one hot mnist data.
     (x_train, y_train), (x_test, y_test) = benchmark_model.load_one_hot_data()
     
@@ -58,8 +62,9 @@ def main(_):
     assert y_train.shape == (60000, 10)
     
     # Minimize model's loss with NMF optimizer.
-    optimizer = NMFOptimizer(config, model)
-    train_op = optimizer.minimize()
+    # optimizer = NMFOptimizer(config)
+    optimizer = NMFOptimizer()
+    train_op = optimizer.minimize(model.loss)
     
     # Minimize model's loss with Adam optimizer.
     bp_optimizer = tf.train.AdamOptimizer(config.learning_rate)
