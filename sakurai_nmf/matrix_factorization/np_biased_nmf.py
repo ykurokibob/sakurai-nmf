@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import numpy as np
 
-from matrix_factorization.utility import _low_rank, relu
+from .utility import _low_rank, relu
 
 
 def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1):
