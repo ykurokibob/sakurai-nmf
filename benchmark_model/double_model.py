@@ -11,11 +11,10 @@ from keras.utils.np_utils import to_categorical
 
 from losses import frobenius_norm
 
-batch_size = 500
-label_size = 1
-
 
 def build_tf_model():
+    batch_size = 3000
+    label_size = 1
     inputs = tf.placeholder(tf.float64, (batch_size, 784), name='inputs')
     labels = tf.placeholder(tf.float64, (batch_size, label_size), name='labels')
     x = tf.layers.dense(inputs, 100, activation=tf.nn.relu, use_bias=True)
@@ -35,12 +34,12 @@ def build_tf_model():
                                  )
 
 
-def build_tf_one_hot_model(shape=784, use_bias=False, activation=None, use_softmax=False):
+def build_tf_one_hot_model(batch_size, shape=784, use_bias=False, activation=None, use_softmax=False):
     inputs = tf.placeholder(tf.float64, (batch_size, shape), name='inputs')
     labels = tf.placeholder(tf.float64, (batch_size, 10), name='labels')
     
     activation = None or activation
-    x = tf.layers.dense(inputs, 500, activation=activation, use_bias=use_bias)
+    x = tf.layers.dense(inputs, 100, activation=activation, use_bias=use_bias)
     x = tf.layers.dense(x, 50, use_bias=use_bias, activation=activation)
     outputs = tf.layers.dense(x, 10, activation=None, use_bias=use_bias)
     
@@ -62,6 +61,8 @@ def build_tf_one_hot_model(shape=784, use_bias=False, activation=None, use_softm
 
 
 def build_keras_model():
+    batch_size = 3000
+    label_size = 1
     inputs = tf.keras.Input((784,), batch_size=batch_size, dtype=tf.float64, name='inputs')
     labels = tf.keras.Input((label_size,), batch_size=batch_size, name='labels', dtype=tf.float64)
     # x = tf.keras.layers.Dense(100, activation=tf.nn.relu, dtype=tf.float64)(inputs)
@@ -70,14 +71,9 @@ def build_keras_model():
     losses = tf.keras.losses.mean_squared_error(y_true=labels, y_pred=outputs)
     loss = tf.reduce_mean(losses)
     return inputs, labels, loss
-    # return agents.tools.AttrDict(inputs=inputs,
-    #                              outputs=outputs,
-    #                              labels=labels,
-    #                              loss=loss,
-    #                              )
 
 
-def build_data():
+def build_data(batch_size, label_size):
     x = np.random.uniform(0., 1., size=(batch_size, 784)).astype(np.float64)
     y = np.random.uniform(-1., 1., size=(batch_size, label_size)).astype(np.float64)
     return x, y
@@ -92,7 +88,7 @@ def load_one_hot_data(dataset='mnist'):
         from keras.datasets.cifar10 import load_data
         shape = 32 * 32 * 3
     (x_train, y_train), (x_test, y_test) = load_data()
-        
+    
     x_train = x_train.reshape((-1, shape)).astype(np.float64) / 255.
     y_train = to_categorical(y_train, 10).astype(np.float64)
     x_test = x_test.reshape((-1, shape)).astype(np.float64) / 255.
