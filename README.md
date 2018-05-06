@@ -17,15 +17,15 @@ from sakurai_nmf.matrix_factorization import semi_nmf
 from sakurai_nmf.losses import np_frobenius_norm
 import numpy as np
 a = np.random.uniform(size=(100, 300)).astype(np.float64)
-u = np.random.uniform(-1., 1., size=[100, 10]).astype('float64')
-v = np.random.uniform(0., 1., size=[10, 300]).astype('float64')
+u = np.random.uniform(-1., 1., size=[100, 200]).astype('float64')
+v = np.random.uniform(0., 1., size=[200, 300]).astype('float64')
 _u, _v = semi_nmf(a, u, v)
 
 >>> np_frobenius_norm(a, u @ v)
-2.1015510101001085
+8.873425835507136
 
 >>> np_frobenius_norm(a, _u @ _v)
-0.8731707199786362
+1.6160798389647092e-13
 ```
 
 
