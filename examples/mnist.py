@@ -55,7 +55,7 @@ def main(_):
     # Build one hot mnist model.
     model = benchmark_model.build_tf_one_hot_model(use_bias=config.use_bias, activation=config.activation)
     # Load one hot mnist data.
-    (x_train, y_train), (x_test, y_test) = benchmark_model.load_one_hot_data(dataset='fashion')
+    (x_train, y_train), (x_test, y_test) = benchmark_model.load_one_hot_data(dataset='mnist')
     
     # Testing whether the dataset have correct shape.
     assert x_train.shape == (60000, 784)
@@ -87,6 +87,9 @@ def main(_):
         # Train with Adam optimizer.
         _train_and_test(bp_train_op, num_iters=config.num_bp_iters)
 
+        print('NMF-optimizer')
+        # Train with NMF optimizer.
+        _train_and_test(train_op, num_iters=config.num_mf_iters)
 
 if __name__ == '__main__':
     tf.app.run()

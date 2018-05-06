@@ -11,7 +11,7 @@ from keras.utils.np_utils import to_categorical
 
 from losses import frobenius_norm
 
-batch_size = 5000
+batch_size = 4000
 label_size = 1
 
 
@@ -35,12 +35,12 @@ def build_tf_model():
                                  )
 
 
-def build_tf_one_hot_model(use_bias=False, activation=None):
-    inputs = tf.placeholder(tf.float64, (batch_size, 784), name='inputs')
+def build_tf_one_hot_model(shape=784, use_bias=False, activation=None):
+    inputs = tf.placeholder(tf.float64, (batch_size, shape), name='inputs')
     labels = tf.placeholder(tf.float64, (batch_size, 10), name='labels')
     
     activation = None or activation
-    x = tf.layers.dense(inputs, 100, activation=activation, use_bias=use_bias)
+    x = tf.layers.dense(inputs, 500, activation=activation, use_bias=use_bias)
     x = tf.layers.dense(x, 50, use_bias=use_bias, activation=activation)
     outputs = tf.layers.dense(x, 10, activation=None, use_bias=use_bias)
     
@@ -85,13 +85,17 @@ def build_data():
 
 def load_one_hot_data(dataset='mnist'):
     from keras.datasets.mnist import load_data
+    shape = 784
     if dataset == 'fashion':
         from keras.datasets.fashion_mnist import load_data
+    elif dataset == 'cifar10':
+        from keras.datasets.cifar10 import load_data
+        shape = 32 * 32 * 3
     (x_train, y_train), (x_test, y_test) = load_data()
         
-    x_train = x_train.reshape((-1, 784)).astype(np.float64) / 255.
+    x_train = x_train.reshape((-1, shape)).astype(np.float64) / 255.
     y_train = to_categorical(y_train, 10).astype(np.float64)
-    x_test = x_test.reshape((-1, 784)).astype(np.float64) / 255.
+    x_test = x_test.reshape((-1, shape)).astype(np.float64) / 255.
     y_test = to_categorical(y_test, 10).astype(np.float64)
     return (x_train, y_train), (x_test, y_test)
 
