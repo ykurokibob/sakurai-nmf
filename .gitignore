@@ -165,3 +165,5 @@ include/
 pip-selfcheck.json
 share/
 *events.out*
+
+.pytest_cache/
