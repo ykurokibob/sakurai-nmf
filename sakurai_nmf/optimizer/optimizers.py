@@ -6,8 +6,8 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-import matrix_factorization as mf
-from optimizer import utility
+import sakurai_nmf.matrix_factorization as mf
+from . import utility
 
 
 class NMFOptimizer(object):

@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import numpy as np
 
-from matrix_factorization import utility
+from . import utility
 
 
 def semi_nmf(a, u, v, rcond=1e-14, eps=1e-15, num_iters=1):

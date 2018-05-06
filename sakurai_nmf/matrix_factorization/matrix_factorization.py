@@ -40,7 +40,7 @@ def semi_nmf(a, u, v,
     """
     
     if use_bias:
-        from matrix_factorization.np_biased_nmf import semi_nmf as semi_nmf_
+        from .np_biased_nmf import semi_nmf as semi_nmf_
         _semi_nmf = functools.partial(semi_nmf_,
                                       alpha=alpha,
                                       beta=beta,
@@ -49,7 +49,7 @@ def semi_nmf(a, u, v,
                                       num_iters=num_iters,
                                       )
     else:
-        from matrix_factorization.np_nmf import semi_nmf as semi_nmf_
+        from .np_nmf import semi_nmf as semi_nmf_
         _semi_nmf = functools.partial(semi_nmf_,
                                       rcond=rcond,
                                       eps=eps,
@@ -125,7 +125,7 @@ def nonlin_semi_nmf(a, u, v,
         When use NumPy, it returns results of u and v.
     """
     if use_bias:
-        from matrix_factorization.np_biased_nmf import nonlin_semi_nmf as nonlin_semi_nmf_
+        from .np_biased_nmf import nonlin_semi_nmf as nonlin_semi_nmf_
         _nonlin_semi_nmf = functools.partial(nonlin_semi_nmf_,
                                              alpha=alpha,
                                              beta=beta,
@@ -136,7 +136,7 @@ def nonlin_semi_nmf(a, u, v,
                                              num_calc_v=num_calc_v,
                                              )
     else:
-        from matrix_factorization.np_nmf import nonlin_semi_nmf as nonlin_semi_nmf_
+        from .np_nmf import nonlin_semi_nmf as nonlin_semi_nmf_
         _nonlin_semi_nmf = functools.partial(nonlin_semi_nmf_,
                                              rcond=rcond,
                                              eps=eps,

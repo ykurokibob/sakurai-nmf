@@ -1,21 +1,16 @@
 """Main of (fashion) mnist model."""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import functools
 import numpy as np
 import tensorflow as tf
 from agents.tools import AttrDict
 
-import benchmark_model
-from optimizer import NMFOptimizer
-
-FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_integer('batch_size', 3000, """Size of batches""")
-tf.app.flags.DEFINE_string('dataset', 'mnist', '''mnist or fashion''')
-tf.app.flags.DEFINE_integer('num_mf_iters', 3, '''Number of matrix factorization iterations''')
-tf.app.flags.DEFINE_integer('num_bp_iters', 5, '''Number of back propagation(adam) iterations''')
-tf.app.flags.DEFINE_float('lr', 0.001, '''learning rate for back propagation''')
-tf.app.flags.DEFINE_boolean('use_relu', False, '''Use ReLU''')
-tf.app.flags.DEFINE_boolean('use_bias', True, '''Use bias''')
+from sakurai_nmf import benchmark_model
+from sakurai_nmf.optimizer import NMFOptimizer
 
 
 def default_config():
@@ -116,4 +111,13 @@ def main(_):
 
 
 if __name__ == '__main__':
+    FLAGS = tf.app.flags.FLAGS
+    tf.app.flags.DEFINE_integer('batch_size', 3000, """Size of batches""")
+    tf.app.flags.DEFINE_string('dataset', 'mnist', '''mnist or fashion''')
+    tf.app.flags.DEFINE_integer('num_mf_iters', 3, '''Number of matrix factorization iterations''')
+    tf.app.flags.DEFINE_integer('num_bp_iters', 5, '''Number of back propagation(adam) iterations''')
+    tf.app.flags.DEFINE_float('lr', 0.001, '''learning rate for back propagation''')
+    tf.app.flags.DEFINE_boolean('use_relu', False, '''Use ReLU''')
+    tf.app.flags.DEFINE_boolean('use_bias', True, '''Use bias''')
+    
     tf.app.run()

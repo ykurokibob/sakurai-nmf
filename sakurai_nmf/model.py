@@ -4,7 +4,7 @@ import tensorflow as tf
 from keras.metrics import categorical_accuracy, binary_accuracy, sparse_categorical_accuracy
 from keras.metrics import categorical_crossentropy, sparse_categorical_crossentropy, binary_crossentropy
 
-from optimizer.optimizers import NMF
+from optimizer._optimizers import NMF
 from utils import batch
 
 
