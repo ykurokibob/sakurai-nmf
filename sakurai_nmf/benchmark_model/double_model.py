@@ -9,7 +9,7 @@ import numpy as np
 import tensorflow as tf
 from keras.utils.np_utils import to_categorical
 
-from sakurai.losses import frobenius_norm
+from sakurai_nmf.losses import frobenius_norm
 
 
 def build_tf_model():

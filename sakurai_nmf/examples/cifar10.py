@@ -5,8 +5,8 @@ import functools
 import numpy as np
 import tensorflow as tf
 
-from sakurai import benchmark_model
-from sakurai.optimizer import NMFOptimizer
+from sakurai_nmf import benchmark_model
+from sakurai_nmf.optimizer import NMFOptimizer
 
 
 def default_config():

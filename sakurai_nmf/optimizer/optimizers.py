@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-import sakurai.matrix_factorization as mf
+import sakurai_nmf.matrix_factorization as mf
 from . import utility
 
 
