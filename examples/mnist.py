@@ -13,9 +13,9 @@ def default_config():
     # Batch size
     batch_size = benchmark_model.batch_size
     # Number of matrix factorization iterations
-    num_mf_iters = 2
+    num_mf_iters = 10
     # Number of back propagation iterations
-    num_bp_iters = 15
+    num_bp_iters = 10
     # Learning rate for adam
     learning_rate = 0.01
     # NMF actiovation
@@ -25,14 +25,25 @@ def default_config():
     return locals()
 
 
-def train_and_test(train_op, num_iters, sess, model, x_train, y_train, x_test, y_test, batch_size=1):
+def train_and_test(train_op, num_iters, sess, model, x_train, y_train, x_test, y_test, batch_size=1,
+                   output_debug=False):
     for i in range(num_iters):
         # Train...
         x, y = benchmark_model.batch(x_train, y_train, batch_size=batch_size)
-        _, train_loss, train_acc = sess.run([train_op, model.cross_entropy, model.accuracy], feed_dict={
+        _,  = sess.run([train_op], feed_dict={
             model.inputs: x,
             model.labels: y,
         })
+        train_loss, train_acc = sess.run([model.cross_entropy, model.accuracy], feed_dict={
+            model.inputs: x,
+            model.labels: y,
+        })
+        if output_debug:
+            outputs = sess.run(model.outputs, feed_dict={
+                model.inputs: x,
+                model.labels: y,
+            })
+            print(outputs)
         stats = []
         # Compute test accuracy.
         for _ in range(5):
@@ -43,7 +54,7 @@ def train_and_test(train_op, num_iters, sess, model, x_train, y_train, x_test, y
             }))
         test_loss, test_acc = np.mean(stats, axis=0)
         
-        print('\r({}/{}) [Train]loss {}, accuracy {} [Test]loss {}, accuracy {}'.format(
+        print('\r({}/{}) [Train]loss {:.3f}, accuracy {:.3f} [Test]loss {:.3f}, accuracy {:.3f}'.format(
             i + 1, num_iters,
             train_loss, train_acc, test_loss, test_acc), end='', flush=True)
     print()
@@ -87,9 +98,6 @@ def main(_):
         # Train with Adam optimizer.
         _train_and_test(bp_train_op, num_iters=config.num_bp_iters)
 
-        print('NMF-optimizer')
-        # Train with NMF optimizer.
-        _train_and_test(train_op, num_iters=config.num_mf_iters)
 
 if __name__ == '__main__':
     tf.app.run()

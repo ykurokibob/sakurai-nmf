@@ -11,7 +11,7 @@ from keras.utils.np_utils import to_categorical
 
 from losses import frobenius_norm
 
-batch_size = 4000
+batch_size = 500
 label_size = 1
 
 
@@ -35,7 +35,7 @@ def build_tf_model():
                                  )
 
 
-def build_tf_one_hot_model(shape=784, use_bias=False, activation=None):
+def build_tf_one_hot_model(shape=784, use_bias=False, activation=None, use_softmax=False):
     inputs = tf.placeholder(tf.float64, (batch_size, shape), name='inputs')
     labels = tf.placeholder(tf.float64, (batch_size, 10), name='labels')
     
@@ -45,8 +45,8 @@ def build_tf_one_hot_model(shape=784, use_bias=False, activation=None):
     outputs = tf.layers.dense(x, 10, activation=None, use_bias=use_bias)
     
     losses = frobenius_norm(labels, outputs)
-    other_losses = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=outputs)
     frob_norm = tf.reduce_mean(losses)
+    other_losses = tf.nn.softmax_cross_entropy_with_logits_v2(labels=labels, logits=outputs)
     cross_entropy = tf.reduce_mean(other_losses)
     
     correct_prediction = tf.equal(tf.argmax(labels, 1), tf.argmax(outputs, 1))
