@@ -11,8 +11,9 @@ import tensorflow as tf
 from losses import frobenius_norm, np_frobenius_norm
 from matrix_factorization.np_nmf import nonlin_semi_nmf, semi_nmf
 
-python_path = Path(__file__).parent
+python_path = Path(__file__).parent.joinpath('datasets')
 mat_file = python_path.joinpath('./large.mat').as_posix()
+print(mat_file)
 
 
 class TestTfFormatNMF(tf.test.TestCase):

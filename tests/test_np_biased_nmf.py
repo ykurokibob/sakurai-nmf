@@ -9,7 +9,7 @@ from losses import np_frobenius_norm
 from matrix_factorization.np_biased_nmf import _nonlin_solve, nonlin_semi_nmf, semi_nmf
 from matrix_factorization.utility import relu
 
-python_path = Path(__file__).parent
+python_path = Path(__file__).parent.joinpath('datasets')
 mat_file = python_path.joinpath('./large.mat').as_posix()
 
 class TestNpBiasedNMF(tf.test.TestCase):

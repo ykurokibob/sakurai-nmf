@@ -14,8 +14,8 @@ from losses import frobenius_norm, np_frobenius_norm
 from matrix_factorization import nonlin_semi_nmf, semi_nmf
 from matrix_factorization.utility import relu
 
-python_path = Path(__file__).parent
-mat_file = python_path.joinpath('./np_tests/large.mat').as_posix()
+python_path = Path(__file__).parent.joinpath('datasets')
+mat_file = python_path.joinpath('./large.mat').as_posix()
 
 
 def mat2tf_format(a, u, v):

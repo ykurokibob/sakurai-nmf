@@ -13,9 +13,8 @@ from losses import frobenius_norm, np_frobenius_norm
 from matrix_factorization import nonlin_semi_nmf, semi_nmf
 from matrix_factorization.utility import relu
 
-python_path = Path(__file__).parent
-mat_file = './np_tests/small_v_neg.mat'
-mat_file = python_path.joinpath(mat_file).as_posix()
+python_path = Path(__file__).parent.joinpath('datasets')
+mat_file = python_path.joinpath('./small_v_neg.mat').as_posix()
 
 
 def print_format(lib, algo, a, u, v, old_loss, new_loss, duration):
