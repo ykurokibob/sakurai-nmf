@@ -7,7 +7,7 @@ The NMF optimizer doesn't work well. But, the NMF would get well.
 ## Install
 
 ```
-pip install -e git+https://github.com/ashigirl96/sakurai-nmf.git
+pip install -e git+https://github.com/ashigirl96/sakurai-nmf.git#egg=sakurai-nmf
 ```
 
 ## Example 
@@ -31,7 +31,7 @@ _u, _v = semi_nmf(a, u, v)
 
 ## Results of MNIST
 
-Now it cannot run well. Please see [test_optimizers.py](https://github.com/ashigirl96/nmf-nn/blob/master/optimizer/tests/test_optimizers.py) or [mnist.py](https://github.com/ashigirl96/nmf-nn/blob/master/examples/mnist.py).
+Now it cannot run well. Please see [(fashion)mnist.py](https://github.com/ashigirl96/sakurai-nmf/blob/master/sakurai_nmf/examples/mnist.py).
 
 But now we can get accuracy 83% for only 7 iterations.
 
