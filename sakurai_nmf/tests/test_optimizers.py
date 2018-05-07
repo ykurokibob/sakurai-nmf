@@ -4,17 +4,18 @@ from __future__ import print_function
 
 from pprint import pprint
 
+import agents
 import numpy as np
 import tensorflow as tf
 
-import benchmark_model
-from optimizer import optimizers
-
-batch_size = benchmark_model.batch_size
-label_size = benchmark_model.label_size
+from sakurai_nmf import benchmark_model
+from sakurai_nmf.optimizer import optimizers
 
 
 def default_config():
+    batch_size = 3000
+    label_size = 10
+    use_autoencoder = True
     return locals()
 
 
@@ -32,6 +33,16 @@ class NMFOptimizerTest(tf.test.TestCase):
         with self.test_session() as sess:
             sess.run(init)
             pprint(optimizer._layers)
+    
+    def test_autoencoder(self):
+        print()
+        config = agents.tools.AttrDict(default_config())
+        model = benchmark_model.build_tf_one_hot_model(batch_size=config.batch_size)
+        
+        optimizer = optimizers.NMFOptimizer(config)
+        train_op = optimizer.minimize(model.frob_norm)
+        self.assertEqual(model.inputs.shape, optimizer.decoder.shape)
+
     
     def test_mnist(self):
         model = benchmark_model.build_tf_one_hot_model()
