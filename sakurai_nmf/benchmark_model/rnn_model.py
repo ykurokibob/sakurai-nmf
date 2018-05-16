@@ -7,19 +7,23 @@ from __future__ import print_function
 import agents
 import numpy as np
 import tensorflow as tf
+from keras.layers import Dense, Input, SimpleRNN
+from keras.models import Model
 from keras.utils.np_utils import to_categorical
 
 from sakurai_nmf.losses import frobenius_norm
+from sakurai_nmf.optimizer import utility
 
 
 def build_rnn_mnist(batch_size, use_bias=False, activation=None):
     time_steps = 28
     num_features = 28
-    inputs = tf.keras.layers.Input((time_steps, num_features), dtype=tf.float64, name='inputs')
+    inputs = tf.keras.layers.Input((time_steps, num_features), batch_size=batch_size, dtype=tf.float64, name='inputs')
     labels = tf.placeholder(tf.float64, (batch_size, 10), name='labels')
     
     activation = None or activation
     x = tf.keras.layers.SimpleRNN(100, use_bias=use_bias, activation=activation)(inputs)
+    rnn = x
     outputs = tf.layers.dense(x, 10, activation=None, use_bias=use_bias)
     
     losses = frobenius_norm(labels, outputs)
@@ -36,7 +40,22 @@ def build_rnn_mnist(batch_size, use_bias=False, activation=None):
                                  frob_norm=frob_norm,
                                  cross_entropy=cross_entropy,
                                  accuracy=accuracy,
+                                 rnn=rnn,
                                  )
+
+
+def build_keras_rnn_mnist(batch_size, use_bias=False, activation=None):
+    time_steps = 28
+    num_features = 28
+    inputs = Input(batch_shape=(batch_size, time_steps, num_features), dtype=tf.float64, name='inputs')
+    
+    activation = None or activation
+    x = SimpleRNN(100, use_bias=use_bias, activation=activation)(inputs)
+    outputs = Dense(10, activation=None, use_bias=use_bias)(x)
+    
+    model = Model(inputs=inputs, outputs=outputs)
+    model.summary()
+    return model
 
 
 def load_mnist(dataset='mnist'):
@@ -57,11 +76,11 @@ def batch(x, y, batch_size):
     return x[rand_index], y[rand_index]
 
 
-def main(_):
+def _train():
     batch_size = 100
-    epoch_size = 3
+    epoch_size = 1
     (x_train, y_train), (x_test, y_test) = load_mnist()
-    model = build_rnn_mnist(batch_size=batch_size, use_bias=True, activation=tf.nn.relu)
+    model = build_rnn_mnist(batch_size=batch_size, use_bias=False, activation=tf.nn.relu)
     
     optimizer = tf.train.AdamOptimizer(0.001)
     train_op = optimizer.minimize(model.cross_entropy)
@@ -78,6 +97,40 @@ def main(_):
             loss, acc = sess.run([model.cross_entropy, model.accuracy],
                                  feed_dict={model.inputs: x, model.labels: y})
             print('({}/{}) loss {}, accuracy {}'.format(epoch + 1, epoch_size, loss, acc))
+
+
+def test_vanilla_rnn():
+    batch_size = 100
+    epoch_size = 1
+    (x_train, y_train), (x_test, y_test) = load_mnist()
+    model = build_rnn_mnist(batch_size=batch_size, use_bias=True, activation=tf.nn.relu)
+    ops = utility.get_train_ops()
+    kernel = ops[0]
+    recurrent_kernel = ops[1]
+    kernels = tf.concat((kernel, recurrent_kernel), axis=0)
+    rnn_read = utility.test_get_rnn_outputs(model.outputs)
+    
+    init = tf.global_variables_initializer()
+    with tf.Session() as sess:
+        init.run()
+        x, y = batch(x_train, y_train, batch_size)
+        rnn_read, rnn = sess.run([rnn_read, model.rnn],
+                                 feed_dict={model.inputs: x, model.labels: y})
+        np.testing.assert_array_equal(rnn_read, rnn)
+
+
+def _keras_rnn():
+    batch_size = 100
+    model = build_keras_rnn_mnist(batch_size=batch_size)
+    print(dir(model.layers[1]))
+    print(model.layers[1].trainable_weights)
+    print(model.layers[1].trainable)
+    print(model.layers[1].units)
+    print(type(model.layers[1]))
+
+
+def main(_):
+    test_vanilla_rnn()
 
 
 if __name__ == '__main__':

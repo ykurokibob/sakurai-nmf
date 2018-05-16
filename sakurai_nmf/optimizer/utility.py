@@ -1,10 +1,14 @@
 """Utility for construct optimizers"""
 
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import collections
 import numpy as np
 import tensorflow as tf
 
-Layer = collections.namedtuple('Layer', 'kernel, bias, output, activation, use_bias')
+Layer = collections.namedtuple('Layer', 'kernel, bias, recurrent, output, activation, use_bias')
 Layer.__new__.__defaults__ = len(Layer._fields) * (None,)
 
 
@@ -61,6 +65,12 @@ def get_name(x):
     return x.name.split('/')[0]
 
 
+def get_op_name(x):
+    if x is None:
+        return None
+    return x.name.split('/')[-1]
+
+
 def _get_activation(op, graph=None):
     graph = graph or tf.get_default_graph()
     activations = ['Relu']
@@ -113,32 +123,144 @@ def zip_layer(inputs: tf.Tensor, ops: list, graph=None):
             return layers
         train_op_name = get_name(train_op)
         activation = _get_activation(train_op_name, graph=graph)
+        
+        bias_op = None
+        recurrent_op = None
+        use_bias = False
+        
+        if 'recurrent_kernel' in get_op_name(ops[0]):
+            # Checking the kernel's shape correspond to recurrent kernel.
+            kernel_shape = train_op.get_shape()
+            recurrent_kernel_shape = ops[0].get_shape()
+            assert len(recurrent_kernel_shape) == 2, \
+                "There is some bugs,kernel doesn't correspond to recurrent kernel."
+            assert kernel_shape[1] == recurrent_kernel_shape[0], \
+                "There is some bugs,kernel doesn't correspond to recurrent kernel."
+            recurrent_op = ops[0]
+            # bias ops no need.
+            ops.pop(0)
+        
         # Conform whether the layer have the bias or not.
-        maybe_bias_op = ops[0]
-        if train_op_name == get_name(maybe_bias_op):
+        if 'bias' in get_op_name(ops[0]):
             # Checking the kernel's shape correspond to bias.
             kernel_shape = train_op.get_shape()
-            bias_shape = maybe_bias_op.get_shape()
+            bias_shape = ops[0].get_shape()
+            assert len(bias_shape) == 1, "There is some bugs," \
+                                         "kernel doesn't correspond to bias."
             assert kernel_shape[1] == bias_shape[0], "There is some bugs," \
                                                      "kernel doesn't correspond to bias."
             use_bias = True
+            bias_op = ops[0]
             # bias ops no need.
             ops.pop(0)
-        else:
-            maybe_bias_op = None
-            use_bias = False
         
         layers.append(Layer(kernel=train_op,
-                            bias=maybe_bias_op,
+                            bias=bias_op,
+                            recurrent=recurrent_op,
                             output=outputs,
                             activation=activation,
                             use_bias=use_bias,
                             ))
         
         # Calculate hidden outputs
+        # TODO :have BUGS that cannot forward correct operations.
         hidden = tf.matmul(outputs, train_op)
         if use_bias:
-            hidden = tf.add(hidden, maybe_bias_op)
+            hidden = tf.add(hidden, bias_op)
         hidden = tf.identity(hidden, name='hidden')
         
         outputs = hidden
+
+
+def zip_layer2(outputs: tf.Tensor):
+    # WARNING no guarantee to get 2 placeholder
+    """Collect placeholder from loss.
+    
+    Args:
+        ops: Trainable variable operations
+        loss: Loss of Neural network.
+
+    Returns:
+        inputs (tf.Tensor): inputs of neural network
+        labels: (tf.Tensor): labels of neural network
+    """
+    queue = collections.deque([outputs])
+    variable_names = []
+    explored_inputs = {outputs}
+    
+    # We do a BFS on the dependency graph of the input function to find
+    # the variables.
+    while len(queue) != 0:
+        # print(queue)
+        tf_obj = queue.popleft()
+        if tf_obj is None:
+            continue
+        # The object put into the queue is not necessarily an operation,
+        # so we want the op attribute to get the operation underlying the
+        # object. Only operations contain the inputs that we can explore.
+        if hasattr(tf_obj, "op"):
+            tf_obj = tf_obj.op
+        for input_op in tf_obj.inputs:
+            if input_op not in explored_inputs:
+                queue.append(input_op)
+                explored_inputs.add(input_op)
+                print('inputs11', input_op.name)
+        if "Variable" in tf_obj.node_def.op:
+            variable_names.append(tf_obj.node_def.name)
+            print('vari!', variable_names)
+    variables = collections.OrderedDict()
+    variable_list = [
+        v for v in tf.global_variables()
+        if v.op.node_def.name in variable_names
+    ]
+    for v in variable_list:
+        variables[v.op.node_def.name] = v
+    return variables
+
+
+def test_get_rnn_outputs(outputs: tf.Tensor):
+    # WARNING no guarantee to get 2 placeholder
+    """Collect placeholder from loss.
+    
+    Args:
+        ops: Trainable variable operations
+        loss: Loss of Neural network.
+
+    Returns:
+        inputs (tf.Tensor): inputs of neural network
+        labels: (tf.Tensor): labels of neural network
+    """
+    queue = collections.deque([outputs])
+    variable_names = []
+    explored_inputs = {outputs}
+    
+    # We do a BFS on the dependency graph of the input function to find
+    # the variables.
+    while len(queue) != 0:
+        # print(queue)
+        tf_obj = queue.popleft()
+        if tf_obj is None:
+            continue
+        # The object put into the queue is not necessarily an operation,
+        # so we want the op attribute to get the operation underlying the
+        # object. Only operations contain the inputs that we can explore.
+        if hasattr(tf_obj, "op"):
+            tf_obj = tf_obj.op
+        for input_op in tf_obj.inputs:
+            if input_op not in explored_inputs:
+                queue.append(input_op)
+                explored_inputs.add(input_op)
+                print('inputs11', input_op.name)
+                if input_op.name == 'simple_rnn/TensorArrayReadV3:0':
+                    return input_op
+        if "Variable" in tf_obj.node_def.op:
+            variable_names.append(tf_obj.node_def.name)
+            print('vari!', variable_names)
+    variables = collections.OrderedDict()
+    variable_list = [
+        v for v in tf.global_variables()
+        if v.op.node_def.name in variable_names
+    ]
+    for v in variable_list:
+        variables[v.op.node_def.name] = v
+    return variables
