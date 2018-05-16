@@ -11,6 +11,8 @@ from keras.utils.np_utils import to_categorical
 
 from sakurai_nmf.losses import frobenius_norm
 
+batch_size = 3000
+label_size = 1
 
 def build_tf_model():
     batch_size = 3000
@@ -39,8 +41,8 @@ def build_tf_one_hot_model(batch_size, shape=784, use_bias=False, activation=Non
     labels = tf.placeholder(tf.float64, (batch_size, 10), name='labels')
     
     activation = None or activation
-    x = tf.layers.dense(inputs, 100, activation=activation, use_bias=use_bias)
-    x = tf.layers.dense(x, 50, use_bias=use_bias, activation=activation)
+    x = tf.layers.dense(inputs, 1000, activation=activation, use_bias=use_bias)
+    x = tf.layers.dense(x, 500, activation=activation, use_bias=use_bias)
     outputs = tf.layers.dense(x, 10, activation=None, use_bias=use_bias)
     
     losses = frobenius_norm(labels, outputs)

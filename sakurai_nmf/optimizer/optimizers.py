@@ -19,13 +19,28 @@ class NMFOptimizer(object):
             config: configuration for setting optimizer.
             model: Neural network model.
         """
+        
         self._config = config
+        if self._config:
+            self._use_autoencoder = config.use_autoencoder or False
+        else:
+            self._use_autoencoder = False
         self._graph = graph
     
     def _init(self, loss):
         self._ops = utility.get_train_ops(graph=self._graph)
         self.inputs, self.labels = utility.get_placeholder_ops(loss)
         self._layers = utility.zip_layer(self.inputs, ops=self._ops, graph=self._graph)
+    
+    def _autoencoder(self):
+        inputs_size = self._layers[0].output.shape[1]
+        output = self._layers[-1].output
+        self.decoder = tf.layers.Dense(inputs_size)(output)
+        autoencoder_losses = tf.losses.mean_squared_error(
+            labels=self.inputs, predictions=self.decoder)
+        self.autoencoder_loss = tf.reduce_mean(autoencoder_losses)
+        
+        self.autoencoder_train_op = tf.train.AdamOptimizer().minimize(self.autoencoder_loss)
     
     def minimize(self, loss=None):
         """Construct the control dependencies for calculating neural net optimized.
@@ -35,6 +50,9 @@ class NMFOptimizer(object):
             The import
         """
         self._init(loss)
+        
+        if self._use_autoencoder:
+            self._autoencoder()
         
         a = self.labels
         updates = []

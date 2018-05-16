@@ -6,10 +6,10 @@ from __future__ import print_function
 
 import numpy as np
 
-from .utility import _low_rank, relu
+from . import utility
 
 
-def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1):
+def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, first_nneg=True):
     """Biased Semi-NMF
     Args:
         a: Original matrix factorized
@@ -24,10 +24,9 @@ def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1
     n = v.shape[1]
     bias = np.ones((n, 1))
     bias_v = np.vstack((v, bias.T))
-    # u = np.hstack((u, np.ones((u.shape[0], 1))))
     
-    for _ in range(num_iters):
-        svd = _low_rank(bias_v, rcond=rcond)
+    def _compute_u(u, bias_v):
+        svd = utility._low_rank(bias_v, rcond=rcond)
         u_t = np.transpose(svd.u)
         r = a - u @ bias_v
         rv = r @ svd.v
@@ -38,7 +37,9 @@ def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1
         ss = np.divide(ss_square,
                        (alpha + ss_square))
         u = u @ (svd.u @ np.diag(ss) @ u_t)
-        
+        return u
+    
+    def _compute_v(u, v, bias_v):
         u_org = u[:, :-1]
         u_t = np.transpose(u_org)
         ua = u_t @ a
@@ -55,6 +56,72 @@ def semi_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1
         sqrt = np.sqrt(divide)
         v = np.multiply(v, sqrt)
         bias_v = np.vstack((v, bias.T))
+        return v, bias_v
+    
+    for _ in range(num_iters):
+        if first_nneg:
+            v, bias_v = _compute_v(u, v, bias_v)
+            u = _compute_u(u, bias_v)
+        else:
+            u = _compute_u(u, bias_v)
+            v, bias_v = _compute_v(u, v, bias_v)
+    return u, v
+
+
+def softmax_nmf(a, u, v, alpha=1e-2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1):
+    """Softmax Biased Semi-NMF
+    Args:
+        a: Original matrix factorized
+        u: Left matrix
+        v: Non-negative matrix
+        rcond: Reciprocal condition number
+        eps:
+
+    Returns:
+        u, v
+    """
+    n = v.shape[1]
+    bias = np.ones((n, 1))
+    bias_v = np.vstack((v, bias.T))
+    
+    def _compute_u(u, bias_v):
+        svd = utility._low_rank(bias_v, rcond=rcond)
+        u_t = np.transpose(svd.u)
+        r = a - u @ bias_v
+        rv = r @ svd.v
+        s_inv = np.linalg.inv(svd.s)
+        u = u + (rv @ s_inv) @ u_t
+        ss = np.diag(svd.s)
+        ss_square = np.square(ss)
+        ss = np.divide(ss_square,
+                       (alpha + ss_square))
+        u = u @ (svd.u @ np.diag(ss) @ u_t)
+        return u
+    
+    def _compute_v(u, v, bias_v):
+        u_org = u[:, :-1]
+        u_t = np.transpose(u_org)
+        ua = u_t @ a
+        uap = (np.abs(ua) + ua) * 0.5
+        uam = (np.abs(ua) - ua) * 0.5
+        uu = u_t @ u
+        uup = (np.abs(uu) + uu) * 0.5
+        uum = (np.abs(uu) - uu) * 0.5
+        
+        divide = np.divide(uap + uum @ bias_v + beta * v,
+                           uam + uup @ bias_v + beta * v + eps)
+        # TODO: The divide induce Nan.
+        divide[divide < 0.] = 0.
+        sqrt = np.sqrt(divide)
+        v = np.multiply(v, sqrt)
+        bias_v = np.vstack((v, bias.T))
+        return v, bias_v
+    
+    for _ in range(num_iters):
+        v, bias_v = _compute_v(u, v, bias_v)
+        v = utility.softmax(v)
+        bias_v = utility.softmax(bias_v)
+        u = _compute_u(u, bias_v)
     return u, v
 
 
@@ -70,7 +137,7 @@ def _nonlin_solve(a, b, x, _lambda=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, so
         """
          min_x || b - f(ax) ||
         """
-        a_svd = _low_rank(a[:, :-1], rcond=1e-14)
+        a_svd = utility._low_rank(a[:, :-1], rcond=1e-14)
         u = a_svd.u
         s = a_svd.s
         v = a_svd.v
@@ -79,10 +146,10 @@ def _nonlin_solve(a, b, x, _lambda=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, so
         bias = np.ones((x.shape[1], 1))
         bias_x = np.vstack((x, bias.T))
         _aa = a[:, :-1].T @ a[:, :-1]
-        u_svd = _low_rank(_aa, rcond=rcond)
+        u_svd = utility._low_rank(_aa, rcond=rcond)
         
         for _ in range(num_iters):
-            r = b - relu(a @ bias_x)
+            r = b - utility.relu(a @ bias_x)
             ur = u.T @ r
             sur_solve = np.linalg.solve(s, ur)
             x = x + _omega * (v @ sur_solve)
@@ -100,7 +167,7 @@ def _nonlin_solve(a, b, x, _lambda=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, so
         """
         bias = np.ones((a.shape[1], 1))
         _a = np.vstack((a, bias.T))
-        a_svd = _low_rank(_a, rcond=rcond)
+        a_svd = utility._low_rank(_a, rcond=rcond)
         u = a_svd.u
         s = a_svd.s
         v = a_svd.v
@@ -108,7 +175,7 @@ def _nonlin_solve(a, b, x, _lambda=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, so
         bias = np.ones((a.shape[1], 1))
         bias_x = np.vstack((a, bias.T))
         for _ in range(num_iters):
-            r = b - relu(x @ bias_x)
+            r = b - utility.relu(x @ bias_x)
             rv = r @ v
             s_inv = np.linalg.inv(s)
             rvs = rv @ s_inv
@@ -126,7 +193,8 @@ def _nonlin_solve(a, b, x, _lambda=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, so
         return _solve_xa(x)
 
 
-def nonlin_semi_nmf(a, u, v, alpha=1e2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, num_calc_u=1, num_calc_v=1):
+def nonlin_semi_nmf(a, u, v, alpha=1e2, beta=1e-2, rcond=1e-14, eps=1e-15, num_iters=1, num_calc_u=1, num_calc_v=1,
+                    first_nneg=True):
     """Biased Nonlinear Semi-NMF
     Args:
         a: Original non-negative matrix factorized
@@ -142,6 +210,14 @@ def nonlin_semi_nmf(a, u, v, alpha=1e2, beta=1e-2, rcond=1e-14, eps=1e-15, num_i
 
     """
     for _ in range(num_iters):
-        v = _nonlin_solve(u, a, v, _lambda=beta, rcond=rcond, eps=eps, solve_ax=True, num_iters=num_calc_v)
-        u = _nonlin_solve(v, a, u, _lambda=alpha, rcond=rcond, eps=eps, solve_ax=False, num_iters=num_calc_u)
+        if first_nneg:
+            # In batch first, v has negative elements.
+            v = _nonlin_solve(u, a, v, _lambda=beta, rcond=rcond, eps=eps, solve_ax=True, num_iters=num_calc_v)
+            # In batch first, u has only non-negative elements.
+            u = _nonlin_solve(v, a, u, _lambda=alpha, rcond=rcond, eps=eps, solve_ax=False, num_iters=num_calc_u)
+        else:
+            # In batch first, u has only non-negative elements.
+            u = _nonlin_solve(v, a, u, _lambda=alpha, rcond=rcond, eps=eps, solve_ax=False, num_iters=num_calc_u)
+            # In batch first, v has negative elements.
+            v = _nonlin_solve(u, a, v, _lambda=beta, rcond=rcond, eps=eps, solve_ax=True, num_iters=num_calc_v)
     return u, v

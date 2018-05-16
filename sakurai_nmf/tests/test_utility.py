@@ -2,10 +2,10 @@ from pprint import pprint
 
 import tensorflow as tf
 
-import benchmark_model
-import losses
-from matrix_factorization import semi_nmf
-from optimizer import utility
+from sakurai_nmf import benchmark_model
+from sakurai_nmf import losses
+from sakurai_nmf.matrix_factorization import semi_nmf
+from sakurai_nmf.optimizer import utility
 
 mat_file = '../../matrix_factorization/tests/np_tests/small_v_neg.mat'
 
@@ -62,7 +62,7 @@ class UtilityTest(tf.test.TestCase):
         v = tf.concat((layer.kernel, layer.bias[None, ...]), axis=0)
         v, bias = utility.split_v_bias(v)
         
-        x, y = benchmark_model.build_data()
+        x, y = benchmark_model.build_data(batch_size, label_size)
         init = tf.global_variables_initializer()
         with self.test_session() as sess:
             sess.run(init)
@@ -119,7 +119,7 @@ class FactorizeTest(tf.test.TestCase):
         _old_local_loss = losses.frobenius_norm(model.labels, hidden @ last_weights)
         _new_local_loss = losses.frobenius_norm(model.labels, tf_u @ tf_v)
         
-        x, y = benchmark_model.build_data()
+        x, y = benchmark_model.build_data(batch_size, label_size)
         init = tf.global_variables_initializer()
         with self.test_session() as sess:
             sess.run(init)
