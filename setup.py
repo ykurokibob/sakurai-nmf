@@ -5,10 +5,14 @@ from __future__ import division
 from __future__ import print_function
 
 import setuptools
+import sys
+
+sys.path.append('./sakurai_nmf')
 
 setuptools.setup(
     name='sakurai_nmf',
     version='0.0.1',
+    test_suite='tests',
     description=(
         'optimize neural network with non-negative matrix factorization'
         'algorithms.'),
