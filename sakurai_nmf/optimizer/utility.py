@@ -61,13 +61,13 @@ def get_placeholder_ops(loss: tf.Operation):
 
 def get_name(x):
     if x is None:
-        return None
+        return ''
     return x.name.split('/')[0]
 
 
 def get_op_name(x):
     if x is None:
-        return None
+        return ''
     return x.name.split('/')[-1]
 
 
