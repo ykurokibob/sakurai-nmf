@@ -9,7 +9,6 @@ import contextlib
 import numpy as np
 
 
-
 class AttrDict(dict):
     """Wrap a dictionary to access keys as attributes."""
     
@@ -70,5 +69,9 @@ def have_nan(name, matrix: np.ndarray):
     num_nans = np.isnan(vec).sum()
     message = '{} has Nan the number of {}'.format(name, num_nans)
     return message
-    
-    
+
+
+def softmax(x):
+    """Compute softmax values for each sets of scores in x."""
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum(axis=0)  # only difference

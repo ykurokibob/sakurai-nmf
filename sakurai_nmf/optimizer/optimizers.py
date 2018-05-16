@@ -19,6 +19,7 @@ class NMFOptimizer(object):
             config: configuration for setting optimizer.
             model: Neural network model.
         """
+        
         self._config = config
         if self._config:
             self._use_autoencoder = config.use_autoencoder or False

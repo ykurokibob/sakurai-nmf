@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-import matrix_factorization as mf
+import sakurai_nmf.matrix_factorization as mf
 
 
 class TestDetailFunction(tf.test.TestCase):

@@ -9,9 +9,9 @@ import numpy as np
 import scipy.io as sio
 import tensorflow as tf
 
-from losses import frobenius_norm, np_frobenius_norm
-from matrix_factorization import nonlin_semi_nmf, semi_nmf
-from matrix_factorization.utility import relu
+from sakurai_nmf.losses import frobenius_norm, np_frobenius_norm
+from sakurai_nmf.matrix_factorization import nonlin_semi_nmf, semi_nmf, softmax_nmf
+from sakurai_nmf.matrix_factorization.utility import relu
 
 python_path = Path(__file__).parent.joinpath('datasets')
 mat_file = python_path.joinpath('./small_v_neg.mat').as_posix()
@@ -29,13 +29,58 @@ def print_format(lib, algo, a, u, v, old_loss, new_loss, duration):
 
 class TestTfFormatMatrixFactorization(tf.test.TestCase):
     def test_np_vanilla_semi_nmf(self):
-        auv = sio.loadmat(mat_file)
-        a, u, v = auv['a'], auv['u'], auv['v']
+        a = np.random.uniform(-1., 1., size=(1000, 100))
+        u = np.random.uniform(0., 1., size=(1000, 2000))
+        v = np.random.uniform(-1., 1., size=(2000, 100))
         old_loss = np_frobenius_norm(a, u @ v)
         
         start_time = time.time()
         
         u, v = semi_nmf(a, u, v, use_bias=False)
+        assert np.min(v) < 0, np.min(v)
+        assert np.min(u) > 0, np.min(u)
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        new_loss = np_frobenius_norm(a, u @ v)
+        assert a.shape == (u @ v).shape
+        assert new_loss < old_loss, "new loss should be less than old loss."
+        print_format('Numpy', 'semi-NMF', a, u, v, old_loss, new_loss, duration)
+    
+    def test_np_u_neg_matlab_semi_nmf(self):
+        a = np.random.uniform(size=(100, 100))
+        u = np.random.uniform(-1., 1., size=(100, 50))
+        v = np.random.uniform(0., 1., size=(50, 100))
+        old_loss = np_frobenius_norm(a, u @ v)
+        
+        start_time = time.time()
+        
+        u, v = semi_nmf(a, u, v, use_bias=False, data_format=False)
+        assert np.min(u) < 0, np.min(u)
+        assert np.min(v) > 0, np.min(v)
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        new_loss = np_frobenius_norm(a, u @ v)
+        assert a.shape == (u @ v).shape
+        assert new_loss < old_loss, "new loss should be less than old loss."
+        print_format('Numpy', 'semi-NMF', a, u, v, old_loss, new_loss, duration)
+    
+    def test_np_softmax_nmf(self):
+        a = np.random.uniform(-1., 1., size=(1000, 100))
+        u = np.random.uniform(0., 1., size=(1000, 2000))
+        v = np.random.uniform(-1., 1., size=(2000, 100))
+        old_loss = np_frobenius_norm(a, u @ v)
+        
+        start_time = time.time()
+        
+        u, v = softmax_nmf(a, u, v, use_bias=False)
+        assert np.min(v) < 0, np.min(v)
+        assert np.min(u) > 0, np.min(u)
+        u_sum = u.sum(axis=1)
+        assert u_sum[u_sum == 1].any(), u_sum
         
         end_time = time.time()
         duration = end_time - start_time
@@ -46,14 +91,16 @@ class TestTfFormatMatrixFactorization(tf.test.TestCase):
         print_format('Numpy', 'semi-NMF', a, u, v, old_loss, new_loss, duration)
     
     def test_np_biased_semi_nmf(self):
-        auv = sio.loadmat(mat_file)
-        a, u, v = auv['a'], auv['u'], auv['v']
+        a = np.random.uniform(-1., 1., size=(100, 100))
+        u = np.random.uniform(0., 1., size=(100, 300))
+        v = np.random.uniform(-1., 1., size=(300, 100))
         old_loss = np_frobenius_norm(a, u @ v)
         
         bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
         start_time = time.time()
         
         u, bias_v = semi_nmf(a, u, bias_v, use_bias=True)
+        assert np.min(u) > 0, np.min(u)
         
         end_time = time.time()
         duration = end_time - start_time
@@ -64,15 +111,41 @@ class TestTfFormatMatrixFactorization(tf.test.TestCase):
         assert a.shape == (bias_u @ bias_v).shape
         assert new_loss < old_loss, "new loss should be less than old loss."
         print_format('Numpy', 'biased semi-NMF', a, bias_u, bias_v, old_loss, new_loss, duration)
+
+    def test_np_biased_softmax_nmf(self):
+        a = np.random.uniform(-1., 1., size=(1000, 100))
+        u = np.random.uniform(0., 1., size=(1000, 2000))
+        v = np.random.uniform(-1., 1., size=(2000, 100))
+        old_loss = np_frobenius_norm(a, u @ v)
+    
+        bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
+        start_time = time.time()
+    
+        u, bias_v = softmax_nmf(a, u, bias_v, use_bias=True)
+        assert np.min(u) > 0, np.min(u)
+        u_sum = u.sum(axis=1)
+        assert u_sum[u_sum == 1].any(), u_sum
+    
+        end_time = time.time()
+        duration = end_time - start_time
+    
+        bias_u = np.hstack((u, np.ones((u.shape[0], 1))))
+    
+        new_loss = np_frobenius_norm(a, bias_u @ bias_v)
+        assert a.shape == (bias_u @ bias_v).shape
+        assert new_loss < old_loss, "new loss should be less than old loss."
+        print_format('Numpy', 'biased semi-NMF', a, bias_u, bias_v, old_loss, new_loss, duration)
     
     def test_np_vanilla_nonlin_semi_nmf(self):
-        auv = sio.loadmat(mat_file)
-        a, u, v = auv['a'], auv['u'], auv['v']
+        a = np.random.uniform(0., 1., size=(200, 100))
+        u = np.random.uniform(0., 1., size=(200, 300))
+        v = np.random.uniform(-1., 1., size=(300, 100))
         old_loss = np_frobenius_norm(a, u @ v)
         
         start_time = time.time()
         
         u, v = nonlin_semi_nmf(a, u, v, use_bias=False)
+        assert np.min(u) > 0, np.min(u)
         
         end_time = time.time()
         duration = end_time - start_time
@@ -83,13 +156,15 @@ class TestTfFormatMatrixFactorization(tf.test.TestCase):
         print_format('Numpy', 'Nonlinear semi-NMF', a, u, v, old_loss, new_loss, duration)
     
     def test_np_not_calc_v_vanilla_nonlin_semi_nmf(self):
-        auv = sio.loadmat(mat_file)
-        a, u, v = auv['a'], auv['u'], auv['v']
+        a = np.random.uniform(0., 1., size=(100, 100))
+        u = np.random.uniform(0., 1., size=(100, 300))
+        v = np.random.uniform(-1., 1., size=(300, 100))
         old_loss = np_frobenius_norm(a, u @ v)
         
         start_time = time.time()
         
         u, v = nonlin_semi_nmf(a, u, v, use_bias=False, num_calc_v=0)
+        assert np.min(u) > 0, np.min(u)
         
         end_time = time.time()
         duration = end_time - start_time
@@ -100,14 +175,16 @@ class TestTfFormatMatrixFactorization(tf.test.TestCase):
         print_format('Numpy', 'Nonlinear semi-NMF(NOT CALCULATE v)', a, u, v, old_loss, new_loss, duration)
     
     def test_np_biased_nonlin_semi_nmf(self):
-        auv = sio.loadmat(mat_file)
-        a, u, v = auv['a'], auv['u'], auv['v']
+        a = np.random.uniform(0., 1., size=(100, 100))
+        u = np.random.uniform(0., 1., size=(100, 300))
+        v = np.random.uniform(-1., 1., size=(300, 100))
         old_loss = np_frobenius_norm(a, u @ v)
         
         bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
         start_time = time.time()
         
         u, bias_v = nonlin_semi_nmf(a, u, bias_v, use_bias=True)
+        assert np.min(u) > 0, np.min(u)
         
         end_time = time.time()
         duration = end_time - start_time
@@ -120,14 +197,16 @@ class TestTfFormatMatrixFactorization(tf.test.TestCase):
         print_format('Numpy', 'biased Nonlinear semi-NMF', a, bias_u, bias_v, old_loss, new_loss, duration)
     
     def test_np_not_calc_v_biased_nonlin_semi_nmf(self):
-        auv = sio.loadmat(mat_file)
-        a, u, v = auv['a'], auv['u'], auv['v']
+        a = np.random.uniform(0., 1., size=(100, 100))
+        u = np.random.uniform(0., 1., size=(100, 300))
+        v = np.random.uniform(-1., 1., size=(300, 100))
         old_loss = np_frobenius_norm(a, u @ v)
         bias_v = np.vstack((v, np.ones((1, v.shape[1]))))
         
         start_time = time.time()
         
         u, bias_v = nonlin_semi_nmf(a, u, bias_v, use_bias=True, num_calc_v=0)
+        assert np.min(u) > 0, np.min(u)
         
         end_time = time.time()
         duration = end_time - start_time
@@ -140,8 +219,9 @@ class TestTfFormatMatrixFactorization(tf.test.TestCase):
         print_format('Numpy', 'biased Nonlinear semi-NMF(NOT CALC v)', a, bias_u, bias_v, old_loss, new_loss, duration)
     
     def test_tf_vanilla_semi_nmf(self):
-        auv = sio.loadmat(mat_file)
-        a, u, v = auv['a'], auv['u'], auv['v']
+        a = np.random.uniform(-1., 1., size=(100, 100))
+        u = np.random.uniform(0., 1., size=(100, 300))
+        v = np.random.uniform(-1., 1., size=(300, 100))
         old_loss = np_frobenius_norm(a, u @ v)
         
         # [1000, 500]
@@ -159,6 +239,7 @@ class TestTfFormatMatrixFactorization(tf.test.TestCase):
             
             start_time = time.time()
             _u, _v, new_loss = sess.run([tf_u, tf_v, tf_loss], feed_dict={a_ph: a, u_ph: u, v_ph: v})
+            assert np.min(_u) > 0, np.min(_u)
             end_time = time.time()
         
         duration = end_time - start_time

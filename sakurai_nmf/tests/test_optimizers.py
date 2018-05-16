@@ -15,6 +15,7 @@ from sakurai_nmf.optimizer import optimizers
 def default_config():
     batch_size = 3000
     label_size = 10
+    use_bias = False
     use_autoencoder = True
     return locals()
 
@@ -22,10 +23,9 @@ def default_config():
 class NMFOptimizerTest(tf.test.TestCase):
     
     def test_factorize(self):
-        print()
-        model = benchmark_model.build_tf_one_hot_model()
+        config = agents.tools.AttrDict(default_config())
+        model = benchmark_model.build_tf_one_hot_model(config.batch_size)
         
-        config = default_config()
         optimizer = optimizers.NMFOptimizer(config)
         train_op = optimizer.minimize(model.frob_norm)
         
@@ -45,7 +45,8 @@ class NMFOptimizerTest(tf.test.TestCase):
 
     
     def test_mnist(self):
-        model = benchmark_model.build_tf_one_hot_model()
+        config = agents.tools.AttrDict(default_config())
+        model = benchmark_model.build_tf_one_hot_model(config.batch_size)
         from keras.utils.np_utils import to_categorical
         from keras.datasets.mnist import load_data
         (x_train, y_train), (x_test, y_test) = load_data('/tmp/mnist')
@@ -55,7 +56,6 @@ class NMFOptimizerTest(tf.test.TestCase):
         assert x_train.shape == (60000, 784)
         assert y_train.shape == (60000, 10)
         
-        config = default_config()
         optimizer = optimizers.NMFOptimizer()
         train_op = optimizer.minimize(model.frob_norm)
         losses = []
@@ -65,7 +65,7 @@ class NMFOptimizerTest(tf.test.TestCase):
             sess.run(init)
             pprint(optimizer._layers)
             for i in range(3):
-                x, y = benchmark_model.batch(x_train, y_train, batch_size=batch_size)
+                x, y = benchmark_model.batch(x_train, y_train, config.batch_size)
                 _, new_loss, acc = sess.run([train_op, model.cross_entropy, model.accuracy], feed_dict={
                     model.inputs: x,
                     model.labels: y,
