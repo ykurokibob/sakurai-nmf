@@ -99,6 +99,15 @@ def _train():
             print('({}/{}) loss {}, accuracy {}'.format(epoch + 1, epoch_size, loss, acc))
 
 
+def _vanilla_rnn():
+    batch_size = 100
+    epoch_size = 1
+    (x_train, y_train), (x_test, y_test) = load_mnist()
+    model = build_rnn_mnist(batch_size=batch_size, use_bias=True, activation=tf.nn.relu)
+    ops = utility.get_train_ops()
+    layers = utility._zip_layer(model.inputs, model.frob_norm, ops)
+
+
 def test_vanilla_rnn():
     batch_size = 100
     epoch_size = 1
@@ -130,7 +139,7 @@ def _keras_rnn():
 
 
 def main(_):
-    test_vanilla_rnn()
+    _vanilla_rnn()
 
 
 if __name__ == '__main__':

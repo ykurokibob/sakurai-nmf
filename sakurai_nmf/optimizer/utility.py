@@ -113,6 +113,7 @@ def zip_layer(inputs: tf.Tensor, ops: list, graph=None):
         List of layers zipped by weight(kernel) and bias.
     """
     layers = []
+    ops_names = {get_name(op) for op in ops}
     # Use temp operation for the last layer doesn't use bias.
     ops.append(None)
     
@@ -172,7 +173,72 @@ def zip_layer(inputs: tf.Tensor, ops: list, graph=None):
         outputs = hidden
 
 
-def zip_layer2(outputs: tf.Tensor):
+def _zip_layer(inputs: tf.Tensor, loss: tf.Tensor, ops: list, graph=None):
+    """
+    Args:
+        inputs: Inputs of network
+        ops: List of layers collected by tf.get_collection
+
+    Returns:
+        List of layers zipped by weight(kernel) and bias.
+    """
+    layers = []
+    ops_names = {get_name(op) for op in ops}
+    each_outputs = collect_outputs(loss, ops_names)
+    # Use temp operation for the last layer doesn't use bias.
+    ops.append(None)
+    
+    outputs = inputs
+    while ops:
+        train_op = ops.pop(0)
+        if train_op is None:
+            return layers
+        train_op_name = get_name(train_op)
+        activation = _get_activation(train_op_name, graph=graph)
+        
+        bias_op = None
+        recurrent_op = None
+        use_bias = False
+        
+        if 'recurrent_kernel' in get_op_name(ops[0]):
+            # Checking the kernel's shape correspond to recurrent kernel.
+            kernel_shape = train_op.get_shape()
+            recurrent_kernel_shape = ops[0].get_shape()
+            assert len(recurrent_kernel_shape) == 2, \
+                "There is some bugs,kernel doesn't correspond to recurrent kernel."
+            assert kernel_shape[1] == recurrent_kernel_shape[0], \
+                "There is some bugs,kernel doesn't correspond to recurrent kernel."
+            recurrent_op = ops[0]
+            # bias ops no need.
+            ops.pop(0)
+        
+        # Conform whether the layer have the bias or not.
+        if 'bias' in get_op_name(ops[0]):
+            # Checking the kernel's shape correspond to bias.
+            kernel_shape = train_op.get_shape()
+            bias_shape = ops[0].get_shape()
+            assert len(bias_shape) == 1, "There is some bugs," \
+                                         "kernel doesn't correspond to bias."
+            assert kernel_shape[1] == bias_shape[0], "There is some bugs," \
+                                                     "kernel doesn't correspond to bias."
+            use_bias = True
+            bias_op = ops[0]
+            # bias ops no need.
+            ops.pop(0)
+        
+        layers.append(Layer(kernel=train_op,
+                            bias=bias_op,
+                            recurrent=recurrent_op,
+                            output=outputs,
+                            activation=activation,
+                            use_bias=use_bias,
+                            ))
+        
+        # TODO :have BUGS that cannot forward correct operations.
+        outputs = tf.identity(each_outputs.pop(train_op_name))
+
+
+def collect_outputs(outputs: tf.Tensor, ops_names: set):
     # WARNING no guarantee to get 2 placeholder
     """Collect placeholder from loss.
     
@@ -188,6 +254,8 @@ def zip_layer2(outputs: tf.Tensor):
     variable_names = []
     explored_inputs = {outputs}
     
+    each_outputs = collections.OrderedDict()
+    
     # We do a BFS on the dependency graph of the input function to find
     # the variables.
     while len(queue) != 0:
@@ -199,24 +267,24 @@ def zip_layer2(outputs: tf.Tensor):
         # so we want the op attribute to get the operation underlying the
         # object. Only operations contain the inputs that we can explore.
         if hasattr(tf_obj, "op"):
+            _tf_obj = tf_obj
             tf_obj = tf_obj.op
+        tf_obj_name = get_name(tf_obj)
+        
+        ops_name_ = None
+        for ops_name in ops_names:
+            if tf_obj_name == ops_name:
+                each_outputs[ops_name] = _tf_obj
+                ops_name_ = ops_name
+        if ops_name_:
+            ops_names.remove(ops_name_)
         for input_op in tf_obj.inputs:
             if input_op not in explored_inputs:
                 queue.append(input_op)
                 explored_inputs.add(input_op)
-                print('inputs11', input_op.name)
-        if "Variable" in tf_obj.node_def.op:
-            variable_names.append(tf_obj.node_def.name)
-            print('vari!', variable_names)
-    variables = collections.OrderedDict()
-    variable_list = [
-        v for v in tf.global_variables()
-        if v.op.node_def.name in variable_names
-    ]
-    for v in variable_list:
-        variables[v.op.node_def.name] = v
-    return variables
-
+        if len(ops_names) == 0:
+            return each_outputs
+    
 
 def test_get_rnn_outputs(outputs: tf.Tensor):
     # WARNING no guarantee to get 2 placeholder

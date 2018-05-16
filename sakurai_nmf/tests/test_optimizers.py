@@ -64,7 +64,7 @@ class NMFOptimizerTest(tf.test.TestCase):
         with self.test_session() as sess:
             sess.run(init)
             pprint(optimizer._layers)
-            for i in range(3):
+            for i in range(2):
                 x, y = benchmark_model.batch(x_train, y_train, config.batch_size)
                 _, new_loss, acc = sess.run([train_op, model.cross_entropy, model.accuracy], feed_dict={
                     model.inputs: x,

@@ -30,7 +30,13 @@ class NMFOptimizer(object):
     def _init(self, loss):
         self._ops = utility.get_train_ops(graph=self._graph)
         self.inputs, self.labels = utility.get_placeholder_ops(loss)
-        self._layers = utility.zip_layer(self.inputs, ops=self._ops, graph=self._graph)
+        self._layers = utility._zip_layer(inputs=self.inputs,
+                                          loss=loss,
+                                          ops=self._ops,
+                                          graph=self._graph)
+        # self._layers = utility.zip_layer(inputs=self.inputs,
+        #                                   ops=self._ops,
+        #                                   graph=self._graph)
     
     def _autoencoder(self):
         inputs_size = self._layers[0].output.shape[1]
@@ -39,7 +45,7 @@ class NMFOptimizer(object):
         autoencoder_losses = tf.losses.mean_squared_error(
             labels=self.inputs, predictions=self.decoder)
         self.autoencoder_loss = tf.reduce_mean(autoencoder_losses)
-        
+
         self.autoencoder_train_op = tf.train.AdamOptimizer().minimize(self.autoencoder_loss)
     
     def minimize(self, loss=None):
