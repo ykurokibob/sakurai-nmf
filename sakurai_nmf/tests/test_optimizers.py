@@ -10,13 +10,14 @@ import tensorflow as tf
 
 from sakurai_nmf import benchmark_model
 from sakurai_nmf.optimizer import optimizers
+from sakurai_nmf.optimizer import rnn_optimizers
 
 
 def default_config():
     batch_size = 3000
     label_size = 10
     use_bias = False
-    use_autoencoder = True
+    use_autoencoder = False
     return locals()
 
 
@@ -73,6 +74,15 @@ class NMFOptimizerTest(tf.test.TestCase):
                 losses.append(new_loss)
                 print('\nloss {}, accuracy {}'.format(new_loss, acc), end='', flush=True)
 
+class RecurrentNMFTest(tf.test.TestCase):
+    
+    def test_concat(self):
+        config = agents.tools.AttrDict(default_config())
+        model = benchmark_model.build_rnn_mnist(config.batch_size)
+    
+        optimizer = rnn_optimizers.RecurrentNMFOptimizer(config)
+        train_op = optimizer.minimize(model.frob_norm)
+        
 
 if __name__ == '__main__':
     tf.test.main()

@@ -5,6 +5,7 @@ from __future__ import division
 from __future__ import print_function
 
 import agents
+import collections
 import numpy as np
 import tensorflow as tf
 from keras.layers import Dense, Input, SimpleRNN
@@ -15,6 +16,34 @@ from sakurai_nmf.losses import frobenius_norm
 from sakurai_nmf.optimizer import utility
 
 
+def search(x):
+    queue = collections.deque([x])
+    variable_names = []
+    explored_inputs = {x}
+    
+    # We do a BFS on the dependency graph of the input function to find
+    # the variables.
+    while len(queue) != 0:
+        tf_obj = queue.popleft()
+        print(tf_obj)
+        # print(tf_obj)
+        if tf_obj is None:
+            continue
+        # The object put into the queue is not necessarily an operation,
+        # so we want the op attribute to get the operation underlying the
+        # object. Only operations contain the inputs that we can explore.
+        if hasattr(tf_obj, "op"):
+            tf_obj = tf_obj.op
+        for input_op in tf_obj.inputs:
+            if input_op not in explored_inputs:
+                queue.append(input_op)
+                explored_inputs.add(input_op)
+        for control in tf_obj.control_inputs:
+            if control not in explored_inputs:
+                queue.append(control)
+                explored_inputs.add(control)
+
+
 def build_rnn_mnist(batch_size, use_bias=False, activation=None):
     time_steps = 28
     num_features = 28
@@ -22,8 +51,11 @@ def build_rnn_mnist(batch_size, use_bias=False, activation=None):
     labels = tf.placeholder(tf.float64, (batch_size, 10), name='labels')
     
     activation = None or activation
-    x = tf.keras.layers.SimpleRNN(100, use_bias=use_bias, activation=activation)(inputs)
-    rnn = x
+    x = tf.keras.layers.SimpleRNN(100, use_bias=use_bias, activation=activation, return_sequences=True)(inputs)
+    x = x[:, -1, :]
+    # x = tf.keras.layers.SimpleRNN(100, use_bias=use_bias, activation=activation)(inputs)
+    # print(x)
+    # print(search(x))
     outputs = tf.layers.dense(x, 10, activation=None, use_bias=use_bias)
     
     losses = frobenius_norm(labels, outputs)
@@ -40,7 +72,6 @@ def build_rnn_mnist(batch_size, use_bias=False, activation=None):
                                  frob_norm=frob_norm,
                                  cross_entropy=cross_entropy,
                                  accuracy=accuracy,
-                                 rnn=rnn,
                                  )
 
 
@@ -77,8 +108,8 @@ def batch(x, y, batch_size):
 
 
 def _train():
-    batch_size = 100
-    epoch_size = 1
+    batch_size = 150
+    epoch_size = 3
     (x_train, y_train), (x_test, y_test) = load_mnist()
     model = build_rnn_mnist(batch_size=batch_size, use_bias=False, activation=tf.nn.relu)
     
@@ -90,9 +121,10 @@ def _train():
         init.run()
         for epoch in range(epoch_size):
             for _ in range(len(x_train) // batch_size):
+            # for _ in range(1):
                 x, y = batch(x_train, y_train, batch_size)
                 _, = sess.run([train_op],
-                              feed_dict={model.inputs: x, model.labels: y})
+                                     feed_dict={model.inputs: x, model.labels: y})
             x, y = batch(x_test, y_test, batch_size)
             loss, acc = sess.run([model.cross_entropy, model.accuracy],
                                  feed_dict={model.inputs: x, model.labels: y})
@@ -106,26 +138,7 @@ def _vanilla_rnn():
     model = build_rnn_mnist(batch_size=batch_size, use_bias=True, activation=tf.nn.relu)
     ops = utility.get_train_ops()
     layers = utility._zip_layer(model.inputs, model.frob_norm, ops)
-
-
-def test_vanilla_rnn():
-    batch_size = 100
-    epoch_size = 1
-    (x_train, y_train), (x_test, y_test) = load_mnist()
-    model = build_rnn_mnist(batch_size=batch_size, use_bias=True, activation=tf.nn.relu)
-    ops = utility.get_train_ops()
-    kernel = ops[0]
-    recurrent_kernel = ops[1]
-    kernels = tf.concat((kernel, recurrent_kernel), axis=0)
-    rnn_read = utility.test_get_rnn_outputs(model.outputs)
-    
-    init = tf.global_variables_initializer()
-    with tf.Session() as sess:
-        init.run()
-        x, y = batch(x_train, y_train, batch_size)
-        rnn_read, rnn = sess.run([rnn_read, model.rnn],
-                                 feed_dict={model.inputs: x, model.labels: y})
-        np.testing.assert_array_equal(rnn_read, rnn)
+    variables = utility.TensorFlowVariables(model.frob_norm)
 
 
 def _keras_rnn():
@@ -138,8 +151,55 @@ def _keras_rnn():
     print(type(model.layers[1]))
 
 
+def cell_unit_rnn():
+    import keras
+    from keras.layers import RNN
+    import keras.backend.tensorflow_backend as K
+    
+    class MinimalRNNCell(keras.layers.Layer):
+        def __init__(self, units, **kwargs):
+            self.units = units
+            self.state_size = units
+            super(MinimalRNNCell, self).__init__(**kwargs)
+        
+        def build(self, input_shape):
+            self.kernel = self.add_weight(shape=(input_shape[-1], self.units),
+                                          initializer='uniform',
+                                          name='kernel')
+            self.recurrent_kernel = self.add_weight(
+                shape=(self.units, self.units),
+                initializer='uniform',
+                name='recurrent_kernel')
+            self.built = True
+        
+        def call(self, inputs, states):
+            prev_output = states[0]
+            h = K.dot(inputs, self.kernel)
+            print('hidden', h)
+            output = h + K.dot(prev_output, self.recurrent_kernel)
+            return output, [output]
+    
+    # Let's use this cell in a RNN layer:
+    
+    cell = MinimalRNNCell(100)
+    x = keras.Input(batch_shape=(3000, 28, 28))
+    # When return_state is True,
+    # [<tf.Tensor 'rnn_1/TensorArrayReadV3:0' shape=(3000, 100) dtype=float64>,
+    # <tf.Tensor 'rnn_1/while/Exit_2:0' shape=(3000, 100) dtype=float64>]
+    
+    # When return_state is False,
+    # Tensor("rnn_1/TensorArrayReadV3:0", shape=(3000, 100), dtype=float64)
+    layer = RNN(cell, return_state=True)
+    y = layer(x)
+    # model = keras.Model(inputs=x, outputs=y)
+    # print(y)
+    # variables = utility.TensorFlowVariables(y)
+    # model.summary()
+
+
 def main(_):
-    _vanilla_rnn()
+    # cell_unit_rnn()
+    _train()
 
 
 if __name__ == '__main__':
