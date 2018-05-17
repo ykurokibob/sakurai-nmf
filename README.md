@@ -5,11 +5,11 @@ The NMF optimizer doesn't work well. But, the NMF would get well.
 
 ## Results of MNIST
 
-Now it cannot run well. Please see [test_optimizers.py](https://github.com/ashigirl96/nmf-nn/blob/master/optimizer/tests/test_optimizers.py) or [mnist.py](https://github.com/ashigirl96/nmf-nn/blob/master/examples/mnist.py).
+Now it cannot run well. Please see [test_optimizers.py](https://github.com/ashigirl96/sakurai-nmf/blob/master/sakurai_nmf/tests/test_optimizers.py) or [mnist.py](https://github.com/ashigirl96/sakurai-nmf/blob/master/sakurai_nmf/examples/mnist.py).
 
 But now we can get accuracy 84% for only 6 iterations without ReLU.
 
-```python
+```bash
 $ python sakurai_nmf/examples/mnist.py --num_bp_iters 5 --num_mf_iters 1
 Using TensorFlow backend.
 NMF-optimizer
@@ -20,7 +20,7 @@ Adam-optimizer
 
 Use only Nonlinear semi-NMF.
 
-```python
+```bash
 $ python sakurai_nmf/examples/mnist.py --num_bp_iters 0 --num_mf_iters 10 --use_relu
 Using TensorFlow backend.
 NMF-optimizer
@@ -31,13 +31,12 @@ NMF-optimizer
 ## Results of Fashion MNIST
 
 
-we can get accuracy 74% for only 17 iterations.
+we can get accuracy 74% for only 3 iterations.
 
 
-```pythonstub
+```bash
+$ python sakurai_nmf/examples/mnist.py --num_bp_iters 0 --num_mf_iters 3 --dataset fashion --use_bias
+Using TensorFlow backend.
 NMF-optimizer
-(2/2) [Train]loss 1.9780992698087023, accuracy 50.19999694824219 [Test]loss 2.0002613045103814, accuracy 64.82400360107422
-Adam-optimizer
-(15/15) [Train]loss 0.8079785835028875, accuracy 71.73999786376953 [Test]loss 0.750417619892654, accuracy 74.11599884033203
-
+(3/3) [Train]loss 1.721, accuracy 90.400 [Test]loss 1.806, accuracy 74.873
 ```
