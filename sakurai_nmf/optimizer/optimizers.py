@@ -76,6 +76,7 @@ class NMFOptimizer(object):
                                    use_tf=True,
                                    use_bias=layer.use_bias,
                                    num_iters=1,
+                                   first_nneg=True,
                                    )
             # Use activation (ReLU)
             else:
@@ -84,6 +85,7 @@ class NMFOptimizer(object):
                                           use_bias=layer.use_bias,
                                           num_calc_v=1,
                                           num_calc_u=1,
+                                          first_nneg=True,
                                           )
             if layer.use_bias:
                 v, bias = utility.split_v_bias(v)

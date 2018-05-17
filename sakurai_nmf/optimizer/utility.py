@@ -103,6 +103,7 @@ def split_v_bias(v: tf.Tensor):
     raise NotImplementedError('Not support type {}'.format(type(v)))
 
 
+# Old zip layer
 def zip_layer(inputs: tf.Tensor, ops: list, graph=None):
     """
     Args:
@@ -173,6 +174,7 @@ def zip_layer(inputs: tf.Tensor, ops: list, graph=None):
         outputs = hidden
 
 
+# Newer zip layer
 def _zip_layer(inputs: tf.Tensor, loss: tf.Tensor, ops: list, graph=None):
     """
     Args:
@@ -284,51 +286,3 @@ def collect_outputs(outputs: tf.Tensor, ops_names: set):
                 explored_inputs.add(input_op)
         if len(ops_names) == 0:
             return each_outputs
-    
-
-def test_get_rnn_outputs(outputs: tf.Tensor):
-    # WARNING no guarantee to get 2 placeholder
-    """Collect placeholder from loss.
-    
-    Args:
-        ops: Trainable variable operations
-        loss: Loss of Neural network.
-
-    Returns:
-        inputs (tf.Tensor): inputs of neural network
-        labels: (tf.Tensor): labels of neural network
-    """
-    queue = collections.deque([outputs])
-    variable_names = []
-    explored_inputs = {outputs}
-    
-    # We do a BFS on the dependency graph of the input function to find
-    # the variables.
-    while len(queue) != 0:
-        # print(queue)
-        tf_obj = queue.popleft()
-        if tf_obj is None:
-            continue
-        # The object put into the queue is not necessarily an operation,
-        # so we want the op attribute to get the operation underlying the
-        # object. Only operations contain the inputs that we can explore.
-        if hasattr(tf_obj, "op"):
-            tf_obj = tf_obj.op
-        for input_op in tf_obj.inputs:
-            if input_op not in explored_inputs:
-                queue.append(input_op)
-                explored_inputs.add(input_op)
-                print('inputs11', input_op.name)
-                if input_op.name == 'simple_rnn/TensorArrayReadV3:0':
-                    return input_op
-        if "Variable" in tf_obj.node_def.op:
-            variable_names.append(tf_obj.node_def.name)
-            print('vari!', variable_names)
-    variables = collections.OrderedDict()
-    variable_list = [
-        v for v in tf.global_variables()
-        if v.op.node_def.name in variable_names
-    ]
-    for v in variable_list:
-        variables[v.op.node_def.name] = v
-    return variables
