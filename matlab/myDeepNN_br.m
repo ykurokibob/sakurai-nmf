@@ -1,4 +1,4 @@
-function [WZ,resvec] = myDeepNN_br(A,Y,A_test,Y_test,param)
+function [WZ,resvec] = myDeepNN_br(A,Y,A_test,Y_test,param,useAE)
 tic;
 t0 = toc;
 tc = 0;
@@ -31,16 +31,25 @@ YI = Y(:,id(1:batch(1)));
 AIusv.U = Ausv.U;
 AIusv.S = Ausv.S;
 AIusv.V = Ausv.V(id(1:batch(1)),:);
-
-WZ(1).W = autoencoder_br(1,AI,AIusv,param);
-a = ones(size(AI,2),1);
-WZ(1).Z = appl_f(WZ(1).W*[AI;a']);
-
+if useAE==0
+    i=1;%noAE
+    k = param.hidden(i);%noAE
+    a = ones(size(AI,2),1);%noAE
+    
+    WZ(1).W = zeros(k,size(AI,1)+1);%noAE
+else
+    WZ(1).W = autoencoder_br(1,AI,AIusv,param);
+end
+    a = ones(size(AI,2),1);
+    WZ(1).Z = appl_f(WZ(1).W*[AI;a']);
 for i = 2:L-1
-  a = ones(size(WZ(i-1).Z,2),1);
-  usv = low_rank_appl([WZ(i-1).Z;a'],delta(2));
-  WZ(i).W = autoencoder_br(i,WZ(i-1).Z,usv,param);
-  WZ(i).Z = appl_f(WZ(i).W*[WZ(i-1).Z;a']);
+    a = ones(size(WZ(i-1).Z,2),1);
+    usv = low_rank_appl([WZ(i-1).Z;a'],delta(2));
+    WZ(i).W = autoencoder_br(i,WZ(i-1).Z,usv,param);
+    %     k = param.hidden(i);%noAE
+    %     WZ(i).W = zeros(k,size(WZ(i-1).Z,1)+1);%noAE
+    
+    WZ(i).Z = appl_f(WZ(i).W*[WZ(i-1).Z;a']);
 end
 
 a = ones(size(WZ(L-1).Z,2),1);
@@ -61,29 +70,29 @@ fprintf('Iter    sec   norm   train  test \n');
 % Alternative minimization iteration (Back propagation)
 for itr = 1:ftitr(1)
     
-  id = randperm(m);
+    id = randperm(m);
     for kk = 1:m/batch(2)
-      ids = (kk-1)*batch(2)+1;
-      ide = kk*batch(2);
-      AI = A(:,id(ids:ide));
-      YI = Y(:,id(ids:ide));
-      AIusv.V = Ausv.V(id(ids:ide),:);
+        ids = (kk-1)*batch(2)+1;
+        ide = kk*batch(2);
+        AI = A(:,id(ids:ide));
+        YI = Y(:,id(ids:ide));
+        AIusv.V = Ausv.V(id(ids:ide),:);
         
-      WZ = compute_z_br(AI,WZ,L);
-      %frobenius norm regularizer:S_F
-      %L1 norm regularizer:S_1
-      [WZ(L).W,WZ(L-1).Z] = nmf_br('S_F',YI,WZ(L).W,WZ(L-1).Z, ...
-                                   lambda(1),lambda(2),ftitr(2),0,0,0);
+        WZ = compute_z_br(AI,WZ,L);
+        %frobenius norm regularizer:S_F
+        %L1 norm regularizer:S_1
+        [WZ(L).W,WZ(L-1).Z] = nmf_br('S_F',YI,WZ(L).W,WZ(L-1).Z, ...
+            lambda(1),lambda(2),ftitr(2),0,0,0);
         
         for i = L-2:-1:1
-          %frobenius norm regularizer:NS_F
-          %L1 norm regularizer:NS_1
-          [WZ(i+1).W,WZ(i).Z] = nmf_br('NS_F',WZ(i+1).Z,WZ(i+1).W, ...
-                                       WZ(i).Z,lambda(1),lambda(2),ftitr(3),nsnmf(1),nsnmf(2),delta(2));
+            %frobenius norm regularizer:NS_F
+            %L1 norm regularizer:NS_1
+            [WZ(i+1).W,WZ(i).Z] = nmf_br('NS_F',WZ(i+1).Z,WZ(i+1).W, ...
+                WZ(i).Z,lambda(1),lambda(2),ftitr(3),nsnmf(1),nsnmf(2),delta(2));
         end
         
         WZ(1).W = non_linear_lsq_br('XA',AI,AIusv,WZ(1).Z,WZ(1).W,lambda(1),nsnmf(1));
-    
+        
         l = l + 1;
         resvec(l,:) = check_br(itr,toc-t0,A,A_test,Y,Y_test,WZ,L);
     end

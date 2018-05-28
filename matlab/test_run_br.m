@@ -29,11 +29,11 @@ param.ftitr  = [1,  1,  1];
 param.nsnmf  = [1, 1];        % # iters for LSQs in nonlinear semi-NMF
 param.batch  = [5000, 5000];   % size of batch for AE and fine tuning
 param.lambda = [1e-3,1e-5]; %regularizer W and Z
-
+useAE=false;
 for seed = 0:0
 rng(seed, 'twister');
 disp(param)
-[WZ,resvec(:,:,seed+1)] = myDeepNN_br(X_train,Y_train,X_test,Y_test,param);
+[WZ,resvec(:,:,seed+1)] = myDeepNN_br(X_train,Y_train,X_test,Y_test,param,useAE);
 
 end
-save('./DATA/resvec_br.mat', 'param', 'resvec','WZ')
+save('./DATA/MNIST.mat', 'param', 'resvec','WZ')
